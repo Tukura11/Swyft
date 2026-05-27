@@ -43,9 +43,9 @@ export class PoolsController {
   @Get(':id')
   @ApiOperation({ summary: 'Get pool details by ID' })
   @ApiParam({ name: 'id', description: 'Pool ID (cuid or contract address)' })
-  @ApiResponse({ status: 200, description: 'Pool details retrieved successfully' })
+  @ApiResponse({ status: 200, type: PoolDetailDto, description: 'Pool details retrieved successfully' })
   @ApiResponse({ status: 404, description: 'Pool not found' })
-  async getPoolById(@Param('id') id: string) {
+  async getPoolById(@Param('id') id: string): Promise<PoolDetailDto> {
     const cacheKey = `pool:${id}`;
 
     const cached = await this.cacheService.get(cacheKey);
@@ -77,12 +77,13 @@ export class PoolsController {
       type: 'array',
       items: {
         type: 'object',
+        required: ['tickIndex', 'liquidityNet', 'liquidityGross', 'feeGrowthOutside0X128', 'feeGrowthOutside1X128'],
         properties: {
-          tickIndex: { type: 'number' },
-          liquidityNet: { type: 'string' },
-          liquidityGross: { type: 'string' },
-          feeGrowthOutside0X128: { type: 'string' },
-          feeGrowthOutside1X128: { type: 'string' },
+          tickIndex: { type: 'number', description: 'Tick index' },
+          liquidityNet: { type: 'string', description: 'Net liquidity change at this tick' },
+          liquidityGross: { type: 'string', description: 'Gross liquidity at this tick' },
+          feeGrowthOutside0X128: { type: 'string', description: 'Fee growth outside for token0' },
+          feeGrowthOutside1X128: { type: 'string', description: 'Fee growth outside for token1' },
         },
       },
     },
