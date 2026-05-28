@@ -22,6 +22,9 @@ coverage/
 *.snap
 __snapshots__/
 .nyc_output/
+*.test-results/
+test-results/
+playwright-report/
 
 # logs
 *.log
@@ -41,3 +44,12 @@ Thumbs.db
 # misc
 .gitkeep
 *.tsbuildinfo
+
+# Rust / Soroban
+Cargo.lock
+*.wasm
+target/
+
+# package manager lockfiles (root — per-package locks are kept)
+package-lock.json
+yarn.lock

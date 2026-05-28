@@ -69,14 +69,20 @@ export async function getPosition({
 }: {
   rpcUrl: string;
   positionNftId: string;
-}): Promise<PositionState> {
-  // positionNftId is the NFT contract address that holds the position
-  const retval = await callContract(rpcUrl, positionNftId, 'get_position');
-  const raw = scValToNative(retval) as Record<string, unknown>;
-
-  if (!raw || typeof raw !== 'object') {
-    throw new SwyftRpcError(`Unexpected position state shape from ${positionNftId}`);
+}): Promise<PositionState | null> {
+  let retval: xdr.ScVal;
+  try {
+    retval = await callContract(rpcUrl, positionNftId, 'get_position');
+  } catch (err) {
+    if (err instanceof SwyftRpcError) return null;
+    throw err;
   }
+
+  // Contract may return void/null when the position does not exist
+  if (retval.switch().name === 'scvVoid') return null;
+
+  const raw = scValToNative(retval) as Record<string, unknown>;
+  if (!raw || typeof raw !== 'object') return null;
 
   return {
     positionNftId,

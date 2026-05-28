@@ -240,6 +240,7 @@ export function SwapWidget({
     !amountIn ||
     parseFloat(amountIn) <= 0 ||
     insufficient ||
+    quoteLoading ||
     !quote;
 
   function selectIn(token: Token) {
@@ -526,9 +527,14 @@ export function SwapWidget({
             onClick={() => setShowModal(true)}
             disabled={swapDisabled}
             aria-disabled={swapDisabled}
-            className="mt-1 w-full min-h-[44px] rounded-xl bg-indigo-600 py-3.5 text-sm font-semibold text-white transition-colors hover:bg-indigo-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 disabled:cursor-not-allowed disabled:opacity-50"
+            className="mt-1 w-full min-h-[44px] rounded-xl bg-indigo-600 py-3.5 text-sm font-semibold text-white transition-colors hover:bg-indigo-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 disabled:cursor-not-allowed disabled:opacity-50 flex items-center justify-center gap-2"
           >
-            {!wallet.address
+            {quoteLoading ? (
+              <>
+                <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" aria-hidden="true" />
+                Fetching quote…
+              </>
+            ) : !wallet.address
               ? "Connect wallet to swap"
               : !pair.tokenIn || !pair.tokenOut
               ? "Select tokens"
