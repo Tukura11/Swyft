@@ -15,6 +15,13 @@ interface AuthRequest {
 export class WebhooksController {
   constructor(private readonly service: WebhooksService) {}
 
+  /**
+   * Register a new webhook for the authenticated wallet.
+   *
+   * @param req - Authenticated request containing the wallet address.
+   * @param body - Webhook configuration: target URL, event types, optional signing secret, and large-swap USD threshold.
+   * @returns The created webhook record (id, url, eventTypes, createdAt).
+   */
   @Post()
   @ApiOperation({ summary: 'Register a webhook' })
   create(
@@ -24,12 +31,25 @@ export class WebhooksController {
     return this.service.create(req.user.walletAddress, body.url, body.eventTypes, body.secret, body.largeSwapUsd);
   }
 
+  /**
+   * List all webhooks belonging to the authenticated wallet.
+   *
+   * @param req - Authenticated request containing the wallet address.
+   * @returns Array of webhook records (id, url, eventTypes, disabled, createdAt).
+   */
   @Get()
   @ApiOperation({ summary: 'List webhooks for the authenticated wallet' })
   list(@Request() req: AuthRequest) {
     return this.service.list(req.user.walletAddress);
   }
 
+  /**
+   * Delete a webhook owned by the authenticated wallet.
+   *
+   * @param id - UUID of the webhook to delete.
+   * @param req - Authenticated request containing the wallet address.
+   * @returns Resolves when the record has been removed (no-op if not found or not owned).
+   */
   @Delete(':id')
   @ApiOperation({ summary: 'Remove a webhook' })
   remove(@Param('id') id: string, @Request() req: AuthRequest) {

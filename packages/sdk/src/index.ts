@@ -8,3 +8,6 @@ export type { BurnTxParams, CollectTxParams, UnsignedTx } from './liquidity';
 export { getPool, getPosition, getTick } from './queries';
 export type { PoolState, PositionState, TickState } from './types';
 export { SwyftRpcError } from './types';
+
+export { buildSwapTx } from './swap';
+export type { PoolId, SwapTxParams, SwapUnsignedTx } from './swap';

@@ -1,9 +1,9 @@
 import { Injectable, Logger, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
-import { Queue, Worker, Job } from 'bullmq';
+import { Queue, Worker, Job, ConnectionOptions } from 'bullmq';
 import { CandlesService, CandleInterval } from './candles.service';
 
 export const CANDLES_QUEUE = 'candle-aggregation';
-const REDIS_CONNECTION = { url: process.env.REDIS_URL ?? 'redis://localhost:6379' };
+const REDIS_CONNECTION: ConnectionOptions = { url: process.env.REDIS_URL ?? 'redis://localhost:6379' };
 
 interface CandleJobData {
   interval: CandleInterval;
@@ -24,17 +24,17 @@ const SCHEDULES: CandleSchedule[] = [
 @Injectable()
 export class CandlesWorker implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(CandlesWorker.name);
-  private worker!: Worker<CandleJobData>;
-  private readonly queue = new Queue<CandleJobData>(CANDLES_QUEUE, {
+  private worker!: Worker<CandleJobData, void>;
+  private readonly queue = new Queue<CandleJobData, void>(CANDLES_QUEUE, {
     connection: REDIS_CONNECTION,
   });
 
   constructor(private readonly service: CandlesService) {}
 
   async onModuleInit(): Promise<void> {
-    this.worker = new Worker<CandleJobData>(
+    this.worker = new Worker<CandleJobData, void>(
       CANDLES_QUEUE,
-      (job: Job<CandleJobData>) => this.service.aggregate(job.data.interval),
+      (job: Job<CandleJobData>): Promise<void> => this.service.aggregate(job.data.interval),
       { connection: REDIS_CONNECTION },
     );
     this.worker.on('completed', (job: Job<CandleJobData>) => {
