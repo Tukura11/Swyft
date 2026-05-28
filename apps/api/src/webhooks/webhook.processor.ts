@@ -41,7 +41,14 @@ export class WebhookWorker implements OnModuleInit, OnModuleDestroy {
     await this.queue.close();
   }
 
-  async dispatch(webhookId: string, payload: WebhookPayload) {
+  /**
+   * Enqueue a webhook delivery job.
+   *
+   * @param webhookId - UUID of the webhook record to deliver to.
+   * @param payload - The event payload to POST to the webhook endpoint.
+   * @returns Resolves once the job has been added to the delivery queue.
+   */
+  async dispatch(webhookId: string, payload: WebhookPayload): Promise<void> {
     await this.queue.add('deliver', { webhookId, payload }, {
       attempts: 3,
       backoff: { type: 'exponential', delay: 2000 },

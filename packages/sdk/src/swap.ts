@@ -37,6 +37,6 @@ export interface SwapUnsignedTx {
  */
 export function buildSwapTx(params: SwapTxParams): SwapUnsignedTx {
   const payload = JSON.stringify({ op: "swap", ...params });
-  const xdr = Buffer.from(payload).toString("base64");
+  const xdr = btoa(payload);
   return { xdr, type: "swap" };
 }
