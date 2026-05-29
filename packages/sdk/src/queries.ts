@@ -1,11 +1,12 @@
 import { SorobanRpc, Contract, xdr, scValToNative } from '@stellar/stellar-sdk';
+
 import { PoolState, PositionState, TickState, SwyftRpcError } from './types';
 
 async function callContract(
   rpcUrl: string,
   contractAddress: string,
   method: string,
-  args: xdr.ScVal[] = [],
+  args: xdr.ScVal[] = []
 ): Promise<xdr.ScVal> {
   const server = new SorobanRpc.Server(rpcUrl, { allowHttp: rpcUrl.startsWith('http://') });
   const contract = new Contract(contractAddress);
@@ -17,7 +18,7 @@ async function callContract(
       // by wrapping the operation in a simulation request directly.
       // stellar-sdk's simulateTransaction accepts an Operation or a built tx;
       // here we pass the raw operation xdr for simulation.
-      op as unknown as Parameters<typeof server.simulateTransaction>[0],
+      op as unknown as Parameters<typeof server.simulateTransaction>[0]
     );
 
     if (SorobanRpc.Api.isSimulationError(result)) {
@@ -33,7 +34,7 @@ async function callContract(
     if (err instanceof SwyftRpcError) throw err;
     throw new SwyftRpcError(
       `RPC call failed for ${method} on ${contractAddress}: ${(err as Error).message}`,
-      err,
+      err
     );
   }
 }
@@ -72,19 +73,54 @@ export async function getPosition({
 }): Promise<PositionState> {
   // positionNftId is the NFT contract address that holds the position
   const retval = await callContract(rpcUrl, positionNftId, 'get_position');
-  const raw = scValToNative(retval) as Record<string, unknown>;
+  const raw = scValToNative(retval) as Record<string, unknown> | null | undefined;
 
-  if (!raw || typeof raw !== 'object') {
+  // The on-chain contract returns `Option<PositionMetadata>`.
+  // When the token was burned (or never minted), the result can be empty,
+  // so we fail fast with a domain error instead of returning zero/blank data.
+  // "Empty" cases can surface as `null`/`undefined`, an empty object, or sometimes
+  // wrapped option-like payloads depending on the Soroban decoder.
+
+  if (raw == null) {
+    throw new SwyftRpcError(`Position is empty (token not found) on ${positionNftId}`);
+  }
+
+  if (typeof raw !== 'object') {
     throw new SwyftRpcError(`Unexpected position state shape from ${positionNftId}`);
   }
 
+  // If the decoder yields an empty object, treat it as Option::None.
+  if (Object.keys(raw as Record<string, unknown>).length === 0) {
+    throw new SwyftRpcError(`Position is empty (token not found) on ${positionNftId}`);
+  }
+
+  // Handle potential option-like wrappers: { value: null }
+  const maybeValue = (raw as Record<string, unknown>)['value'];
+  if ('value' in (raw as Record<string, unknown>) && maybeValue == null) {
+    throw new SwyftRpcError(`Position is empty (token not found) on ${positionNftId}`);
+  }
+
+  // If wrapped as { value: PositionMetadata }, unwrap it.
+  const position =
+    'value' in (raw as Record<string, unknown>)
+      ? ((raw as Record<string, unknown>)['value'] ?? raw)
+      : raw;
+
   return {
     positionNftId,
-    owner: String(raw['owner'] ?? ''),
-    pool: String(raw['pool'] ?? ''),
-    lowerTick: Number(raw['lower_tick'] ?? raw['lowerTick'] ?? 0),
-    upperTick: Number(raw['upper_tick'] ?? raw['upperTick'] ?? 0),
-    liquidity: String(raw['liquidity'] ?? '0'),
+    owner: String((position as Record<string, unknown>)['owner'] ?? ''),
+    pool: String((position as Record<string, unknown>)['pool'] ?? ''),
+    lowerTick: Number(
+      (position as Record<string, unknown>)['lower_tick'] ??
+        (position as Record<string, unknown>)['lowerTick'] ??
+        0
+    ),
+    upperTick: Number(
+      (position as Record<string, unknown>)['upper_tick'] ??
+        (position as Record<string, unknown>)['upperTick'] ??
+        0
+    ),
+    liquidity: String((position as Record<string, unknown>)['liquidity'] ?? '0'),
   };
 }
 
