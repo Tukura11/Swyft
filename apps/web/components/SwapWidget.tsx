@@ -186,12 +186,37 @@ interface WalletState {
 }
 
 interface Props {
+  /** Current wallet state. Pass `{ address: null }` when no wallet is connected. */
   wallet: WalletState;
+  /** Called whenever the user selects a new "token in". Receives `null` when cleared. */
   onTokenInChange?: (token: Token | null) => void;
+  /** Called whenever the user selects a new "token out". Receives `null` when cleared. */
   onTokenOutChange?: (token: Token | null) => void;
+  /** Called after a swap transaction is successfully submitted and confirmed. */
   onSwapSuccess?: () => void;
 }
 
+/**
+ * SwapWidget — concentrated-liquidity swap interface.
+ *
+ * Renders a self-contained swap card that lets users select a token pair,
+ * enter an amount, preview a quote (price, impact, fees), and submit the
+ * swap via a confirmation modal.
+ *
+ * @param props.wallet - Wallet state containing the connected address (or `null`).
+ * @param props.onTokenInChange - Optional callback fired when the input token changes.
+ * @param props.onTokenOutChange - Optional callback fired when the output token changes.
+ * @param props.onSwapSuccess - Optional callback fired after a successful swap.
+ * @returns A React element — the full swap widget, or a loading/error skeleton.
+ *
+ * @example
+ * ```tsx
+ * <SwapWidget
+ *   wallet={{ address: walletAddress }}
+ *   onSwapSuccess={() => refetchBalances()}
+ * />
+ * ```
+ */
 export function SwapWidget({
   wallet,
   onTokenInChange,
