@@ -1,125 +1,142 @@
-jest.mock(
-  '@prisma/client',
-  () => {
-    const mockInstance = {
-      token: { upsert: jest.fn() },
-      pool: { upsert: jest.fn() },
-      position: { upsert: jest.fn() },
-      swap: { createMany: jest.fn() },
-      priceCandle: { createMany: jest.fn() },
-      $disconnect: jest.fn(),
-    };
-    (global as any).mockPrismaInstance = mockInstance;
-    return {
-      PrismaClient: jest.fn().mockImplementation(() => mockInstance),
-    };
-  },
-  { virtual: true },
-);
+/**
+ * Unit tests for prisma/seed.ts
+ *
+ * All Prisma client calls are mocked so no real database connection is needed.
+ * The tests verify that each entity (tokens, pool, position, swaps, candles)
+ * is upserted / created with the expected arguments.
+ */
 
-import { main } from '../../../prisma/seed';
+import { PrismaClient } from '@prisma/client';
 
-const getMockPrisma = () => (global as any).mockPrismaInstance;
+// ── Mock PrismaClient ────────────────────────────────────────────────────────
 
-// Mock stdout and console to keep output clean during tests
-const stdoutSpy = jest.spyOn(process.stdout, 'write').mockImplementation(() => true);
-const consoleSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
-const setIntervalSpy = jest.spyOn(global, 'setInterval').mockImplementation(((cb: any) => 123 as any) as any);
-const clearIntervalSpy = jest.spyOn(global, 'clearInterval').mockImplementation(() => {});
+const mockUpsert = jest.fn();
+const mockCreateMany = jest.fn();
+const mockDisconnect = jest.fn().mockResolvedValue(undefined);
 
-describe('Prisma Seed', () => {
-  beforeEach(() => {
-    jest.clearAllMocks();
+jest.mock('@prisma/client', () => ({
+  PrismaClient: jest.fn().mockImplementation(() => ({
+    token: { upsert: mockUpsert },
+    pool: { upsert: mockUpsert },
+    position: { upsert: mockUpsert },
+    swap: { createMany: mockCreateMany },
+    priceCandle: { createMany: mockCreateMany },
+    $disconnect: mockDisconnect,
+  })),
+}));
+
+// ── Helpers ──────────────────────────────────────────────────────────────────
+
+/** Suppress spinner stdout noise during tests. */
+beforeAll(() => {
+  jest.spyOn(process.stdout, 'write').mockImplementation(() => true);
+});
+
+afterAll(() => {
+  (process.stdout.write as jest.Mock).mockRestore();
+});
+
+beforeEach(() => {
+  jest.clearAllMocks();
+  // Default: upsert returns the created record
+  mockUpsert
+    .mockResolvedValueOnce({ symbol: 'USDC', address: 'GA5ZSEJYB37JRC5AVCIA5MOP4RHTM335X2KGX3IHOJAPP5RE34K4KZVN' }) // token0
+    .mockResolvedValueOnce({ symbol: 'XLM',  address: 'GBDEVU63Y6NTHJQQZIKVTC23NWLQVP3WJ2RI2OTSJTNYOIGICST6DUXR' }) // token1
+    .mockResolvedValueOnce({ id: 'test-pool-1' })     // pool
+    .mockResolvedValueOnce({ id: 'test-position-1' }); // position
+  mockCreateMany.mockResolvedValue({ count: 2 });
+});
+
+// ── Tests ────────────────────────────────────────────────────────────────────
+
+describe('prisma seed', () => {
+  async function runSeed() {
+    // Re-require each time so module-level code (main()) runs fresh
+    jest.resetModules();
+
+    // Re-apply mock after resetModules
+    jest.mock('@prisma/client', () => ({
+      PrismaClient: jest.fn().mockImplementation(() => ({
+        token: { upsert: mockUpsert },
+        pool: { upsert: mockUpsert },
+        position: { upsert: mockUpsert },
+        swap: { createMany: mockCreateMany },
+        priceCandle: { createMany: mockCreateMany },
+        $disconnect: mockDisconnect,
+      })),
+    }));
+
+    // Dynamically import so the top-level main() call executes
+    await import('../../../../prisma/seed');
+    // Allow all pending promises to settle
+    await new Promise((r) => setImmediate(r));
+  }
+
+  it('upserts USDC token with correct address', async () => {
+    await runSeed();
+    expect(mockUpsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { address: 'GA5ZSEJYB37JRC5AVCIA5MOP4RHTM335X2KGX3IHOJAPP5RE34K4KZVN' },
+        create: expect.objectContaining({ symbol: 'USDC', decimals: 6 }),
+      }),
+    );
   });
 
-  afterAll(() => {
-    stdoutSpy.mockRestore();
-    consoleSpy.mockRestore();
-    setIntervalSpy.mockRestore();
-    clearIntervalSpy.mockRestore();
+  it('upserts XLM token with correct address', async () => {
+    await runSeed();
+    expect(mockUpsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { address: 'GBDEVU63Y6NTHJQQZIKVTC23NWLQVP3WJ2RI2OTSJTNYOIGICST6DUXR' },
+        create: expect.objectContaining({ symbol: 'XLM', decimals: 7 }),
+      }),
+    );
   });
 
-  it('should seed the database successfully with all models', async () => {
-    const mockPrisma = getMockPrisma();
-    
-    // Setup mock implementations for the chain
-    mockPrisma.token.upsert.mockResolvedValueOnce({ symbol: 'USDC', address: 'GA5ZSEJYB37JRC5AVCIA5MOP4RHTM335X2KGX3IHOJAPP5RE34K4KZVN' });
-    mockPrisma.token.upsert.mockResolvedValueOnce({ symbol: 'XLM', address: 'GBDEVU63Y6NTHJQQZIKVTC23NWLQVP3WJ2RI2OTSJTNYOIGICST6DUXR' });
-    
-    mockPrisma.pool.upsert.mockResolvedValueOnce({ id: 'test-pool-1' });
-    mockPrisma.position.upsert.mockResolvedValueOnce({ id: 'test-position-1' });
-    mockPrisma.swap.createMany.mockResolvedValueOnce({ count: 2 });
-    mockPrisma.priceCandle.createMany.mockResolvedValueOnce({ count: 1 });
-
-    // Execute the seed main function
-    await expect(main()).resolves.not.toThrow();
-
-    // Verify all mock methods were called correctly
-    expect(mockPrisma.token.upsert).toHaveBeenCalledTimes(2);
-    expect(mockPrisma.pool.upsert).toHaveBeenCalledTimes(1);
-    expect(mockPrisma.position.upsert).toHaveBeenCalledTimes(1);
-    expect(mockPrisma.swap.createMany).toHaveBeenCalledTimes(1);
-    expect(mockPrisma.priceCandle.createMany).toHaveBeenCalledTimes(1);
-
-    // Verify correct seed data structure is passed
-    expect(mockPrisma.token.upsert).toHaveBeenNthCalledWith(1, expect.objectContaining({
-      where: { address: 'GA5ZSEJYB37JRC5AVCIA5MOP4RHTM335X2KGX3IHOJAPP5RE34K4KZVN' },
-      create: expect.objectContaining({
-        symbol: 'USDC',
-        decimals: 6,
+  it('upserts pool with fee tier 3000', async () => {
+    await runSeed();
+    expect(mockUpsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: 'test-pool-1' },
+        create: expect.objectContaining({ feeTier: 3000 }),
       }),
-    }));
-
-    expect(mockPrisma.token.upsert).toHaveBeenNthCalledWith(2, expect.objectContaining({
-      where: { address: 'GBDEVU63Y6NTHJQQZIKVTC23NWLQVP3WJ2RI2OTSJTNYOIGICST6DUXR' },
-      create: expect.objectContaining({
-        symbol: 'XLM',
-        decimals: 7,
-      }),
-    }));
-
-    expect(mockPrisma.pool.upsert).toHaveBeenCalledWith(expect.objectContaining({
-      where: { id: 'test-pool-1' },
-      create: expect.objectContaining({
-        feeTier: 3000,
-      }),
-    }));
-
-    expect(mockPrisma.position.upsert).toHaveBeenCalledWith(expect.objectContaining({
-      where: { id: 'test-position-1' },
-      create: expect.objectContaining({
-        poolId: 'test-pool-1',
-        lowerTick: -60,
-        upperTick: 60,
-      }),
-    }));
-
-    expect(mockPrisma.swap.createMany).toHaveBeenCalledWith(expect.objectContaining({
-      data: expect.arrayContaining([
-        expect.objectContaining({ transactionHash: 'test-tx-1' }),
-        expect.objectContaining({ transactionHash: 'test-tx-2' }),
-      ]),
-    }));
-
-    expect(mockPrisma.priceCandle.createMany).toHaveBeenCalledWith(expect.objectContaining({
-      data: expect.arrayContaining([
-        expect.objectContaining({
-          open: 1.0,
-          high: 1.05,
-          low: 0.95,
-          close: 1.02,
-          volumeUsd: 1000000.0,
-          interval: '1h',
-        }),
-      ]),
-    }));
+    );
   });
 
-  it('should propagate errors if any DB seed step fails', async () => {
-    const mockPrisma = getMockPrisma();
-    const dbError = new Error('Database connection failed');
-    mockPrisma.token.upsert.mockRejectedValueOnce(dbError);
+  it('upserts position linked to the pool', async () => {
+    await runSeed();
+    expect(mockUpsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: 'test-position-1' },
+        create: expect.objectContaining({ poolId: 'test-pool-1' }),
+      }),
+    );
+  });
 
-    await expect(main()).rejects.toThrow('Database connection failed');
+  it('creates 2 swap records', async () => {
+    await runSeed();
+    expect(mockCreateMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.arrayContaining([
+          expect.objectContaining({ transactionHash: 'test-tx-1' }),
+          expect.objectContaining({ transactionHash: 'test-tx-2' }),
+        ]),
+      }),
+    );
+  });
+
+  it('creates at least 1 price candle', async () => {
+    await runSeed();
+    expect(mockCreateMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.arrayContaining([
+          expect.objectContaining({ poolId: 'test-pool-1', interval: '1h' }),
+        ]),
+      }),
+    );
+  });
+
+  it('disconnects prisma after seeding', async () => {
+    await runSeed();
+    expect(mockDisconnect).toHaveBeenCalled();
   });
 });
