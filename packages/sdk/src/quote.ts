@@ -4,24 +4,46 @@ const Q96 = 2n ** 96n;
 const MAX_TICK = 887272;
 const MIN_TICK = -887272;
 
+/**
+ * Parameters for calculating a simple swap quote without pool state.
+ * Used for quick estimates before fetching full pool data.
+ */
 export interface SwapQuoteParams {
+  /** Pool identifier (cuid or contract address) */
   poolId: string;
+  /** Token address being swapped in */
   tokenInId: string;
+  /** Token address being swapped out */
   tokenOutId: string;
+  /** Amount of tokenIn to swap (in token units) */
   amountIn: string;
+  /** Slippage tolerance in basis points (0-10000). For 0.5%, use 50 */
   slippageBps: number;
 }
 
+/**
+ * Quote result from a swap operation.
+ * All amounts are strings to preserve precision.
+ */
 export interface SwapQuote {
+  /** Expected amount received after swap (before slippage) */
   amountOut: string;
+  /** Price impact percentage (0-100). Higher means worse execution price */
   priceImpact: number;
+  /** LP protocol fee amount */
   lpFee: string;
+  /** Protocol fee amount */
   protocolFee: string;
+  /** Minimum amount received accounting for slippage */
   minimumReceived: string;
+  /** Actual execution price (amountOut / amountIn) */
   executionPrice: string;
 }
 
-/** A zero-value quote returned when inputs are missing or invalid. */
+/**
+ * A zero-value quote returned when inputs are missing or invalid.
+ * Use as a fallback when swap parameters are invalid.
+ */
 export const EMPTY_QUOTE: SwapQuote = {
   amountOut: "0",
   priceImpact: 0,
@@ -31,11 +53,30 @@ export const EMPTY_QUOTE: SwapQuote = {
   executionPrice: "0",
 };
 
-/** Returns true when a quote carries no meaningful output (e.g. empty input). */
+/**
+ * Determine if a quote represents an empty or invalid result.
+ * @param quote - The quote to check
+ * @returns true if the quote is empty (zero output), false otherwise
+ */
 export function isEmptyQuote(quote: SwapQuote): boolean {
   return quote.amountOut === "0" && quote.executionPrice === "0";
 }
 
+/**
+ * Calculate a simple swap quote without requiring full pool state.
+ * Uses constant-product formula with estimated reserves.
+ *
+ * @param params - Swap parameters including pool, tokens, and amount
+ * @returns Swap quote with output amount, fees, and price impact
+ *
+ * @remarks
+ * This function provides quick estimates and uses default reserve assumptions.
+ * For accurate quotes, use {@link getSwapQuote} with full pool state.
+ *
+ * Edge cases:
+ * - Returns EMPTY_QUOTE if amountIn is missing, zero, or negative
+ * - Returns EMPTY_QUOTE if parsing fails
+ */
 export function calculateSwapQuote(params: SwapQuoteParams): SwapQuote {
   if (!params?.amountIn) return EMPTY_QUOTE;
   const amountIn = parseFloat(params.amountIn);
@@ -62,21 +103,58 @@ export function calculateSwapQuote(params: SwapQuoteParams): SwapQuote {
   };
 }
 
+/**
+ * Parameters for calculating an accurate swap quote with full pool state.
+ * Requires complete pool data including tick information.
+ */
 export interface LocalSwapQuoteParams {
+  /** Current pool state including liquidity, price, and optional tick data */
   poolState: PoolState & { ticks?: TickState[] };
+  /** Address of token being swapped in (must be token0 or token1) */
   tokenIn: string;
+  /** Amount of tokenIn to swap (integer string or bigint in token units) */
   amountIn: string | bigint;
+  /** Slippage tolerance in basis points (0-10000). For 0.5%, use 50 */
   slippage: number;
 }
 
+/**
+ * Accurate swap quote result calculated using complete pool state.
+ * All amounts are strings to preserve precision for large values.
+ */
 export interface LocalSwapQuote {
+  /** Exact amount that will be received after swap (before slippage) */
   amountOut: string;
+  /** Price impact percentage (0-100) */
   priceImpact: number;
+  /** Total fee amount deducted from input */
   fee: string;
+  /** Minimum amount guaranteed by slippage tolerance */
   minimumReceived: string;
+  /** Price limit for swap execution (sqrtPrice * 2^96) */
   sqrtPriceLimitX96: string;
 }
 
+/**
+ * Calculate an accurate swap quote using complete pool state.
+ * Simulates the swap across ticks to compute exact output amount.
+ *
+ * @param params - Pool state, input token, amount, and slippage tolerance
+ * @returns Accurate swap quote with exact output and execution details
+ *
+ * @throws Error if amountIn is zero or negative
+ * @throws Error if amountIn is not a valid integer string
+ * @throws Error if pool has zero liquidity in current range
+ * @throws Error if amountIn is fully consumed by fees
+ * @throws Error if invalid token direction (token not in pool)
+ * @throws Error if swap exceeds available liquidity in pool
+ * @throws Error if slippage exceeds 100% (10000 bps)
+ *
+ * @remarks
+ * This function performs an exact simulation based on current pool state.
+ * Results are only valid at the moment the pool state was fetched.
+ * Use returned sqrtPriceLimitX96 to protect against slippage on-chain.
+ */
 export function getSwapQuote(params: LocalSwapQuoteParams): LocalSwapQuote {
   const amountIn = toBigIntAmount(params.amountIn);
   if (amountIn <= 0n) {
