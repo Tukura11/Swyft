@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { signTransaction } from "@stellar/freighter-api";
-import { buildSwapTx } from "@swyft/sdk";
+import { buildSwapTx, toRawAmount, toStellarAddress } from "@swyft/sdk";
 import type { SwapQuote } from "@swyft/sdk";
 import type { Token } from "@swyft/ui";
 import { API_BASE, SWYFT_NETWORK } from "@/lib/constants";
@@ -43,12 +43,12 @@ export function useSwapExecution() {
 
     try {
       const { xdr } = buildSwapTx({
-        poolId,
-        tokenInId: tokenIn.id,
-        tokenOutId: tokenOut.id,
-        amountIn,
-        minimumReceived: quote.minimumReceived,
-        ownerAddress: walletAddress,
+        poolId: toStellarAddress(poolId),
+        tokenInId: toStellarAddress(tokenIn.id),
+        tokenOutId: toStellarAddress(tokenOut.id),
+        amountIn: toRawAmount(amountIn),
+        minimumReceived: toRawAmount(quote.minimumReceived),
+        ownerAddress: toStellarAddress(walletAddress),
       });
 
       const signResult = await signTransaction(xdr, { network: SWYFT_NETWORK });

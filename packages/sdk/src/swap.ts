@@ -38,17 +38,17 @@ export interface PoolId {
 /** Parameters for building an exact-input single-hop swap transaction. */
 export interface SwapTxParams {
   /** On-chain pool contract address. */
-  readonly poolId: string;
+  readonly poolId: StellarAddress;
   /** Contract address of the token being sold. */
-  readonly tokenInId: string;
+  readonly tokenInId: StellarAddress;
   /** Contract address of the token being bought. */
-  readonly tokenOutId: string;
+  readonly tokenOutId: StellarAddress;
   /** Raw amount of `tokenIn` to sell (as a string to avoid JS bigint loss). */
-  readonly amountIn: string;
+  readonly amountIn: RawAmount;
   /** Slippage-adjusted minimum amount of `tokenOut` to receive. */
-  readonly minimumReceived: string;
+  readonly minimumReceived: RawAmount;
   /** Stellar account address of the transaction submitter / recipient. */
-  readonly ownerAddress: string;
+  readonly ownerAddress: StellarAddress;
 }
 
 /** An unsigned Soroban transaction envelope ready for wallet signing. */

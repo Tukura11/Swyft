@@ -5,7 +5,7 @@ export { buildBurnTx, buildCollectTx, estimateRemoveAmounts, estimateRemoveAmoun
 export type { BurnTxParams, CollectTxParams, UnsignedTx, BurnUnsignedTx, CollectUnsignedTx, RemoveAmountsResult, RemoveAmountsParams } from './liquidity';
 
 // #69 — Pool query helpers
-export { getPool, getPosition, getTick, EMPTY_POSITION_MESSAGE } from './queries';
+export { getPool, getPosition, getPositionWithLoading, getTick, EMPTY_POSITION_MESSAGE } from './queries';
 export type { PoolState, PositionState, TickState } from './types';
 export { SwyftRpcError } from './types';
 

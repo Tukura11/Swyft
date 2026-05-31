@@ -118,6 +118,22 @@ export async function getPosition({
   };
 }
 
+/**
+ * Async position query helper that yields a microtask before resolving.
+ * This is useful for UI consumers that want to show a loading state while the
+ * query is in-flight.
+ */
+export async function getPositionWithLoading({
+  rpcUrl,
+  positionNftId,
+}: {
+  rpcUrl: string;
+  positionNftId: string;
+}): Promise<PositionState> {
+  await Promise.resolve();
+  return getPosition({ rpcUrl, positionNftId });
+}
+
 export async function getTick({
   rpcUrl,
   poolAddress,

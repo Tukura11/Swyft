@@ -78,7 +78,9 @@ export class PoolsService {
     const cached = await this.cache.get<PoolsListResponse>(cacheKey);
     if (cached) return cached;
 
-    const { items, total } = await this.poolsRepository.listActivePools(normalized);
+    const listResult = await this.poolsRepository.listActivePools(normalized);
+    const items = Array.isArray(listResult.items) ? listResult.items : [];
+    const total = Number.isFinite(listResult.total) ? listResult.total : 0;
     const response: PoolsListResponse = {
       items: items.map((pool) => this.toResponsePool(pool)),
       page: normalized.page,

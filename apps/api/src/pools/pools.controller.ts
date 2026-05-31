@@ -73,7 +73,18 @@ export class PoolsController {
   async getPools(@Query() query: GetPoolsQueryDto): Promise<PoolsListResponse> {
     const result = await this.poolsService.getPools(query);
 
-    // Empty result is valid — return it as-is so the UI can render an empty state
+    if (!result || !Array.isArray(result.items)) {
+      return {
+        items: [],
+        page: query.page ?? 1,
+        limit: query.limit ?? 20,
+        total: 0,
+        totalPages: 0,
+        orderBy: query.orderBy ?? 'tvl',
+        search: query.search?.trim() || undefined,
+      };
+    }
+
     return result;
   }
 

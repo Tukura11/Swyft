@@ -7,10 +7,21 @@ import { SWYFT_NETWORK } from "@/lib/constants";
 
 type Tab = "swaps" | "lp";
 
+/**
+ * Props accepted by the transaction history table.
+ *
+ * @property walletAddress - Wallet address used to load swap and LP history items.
+ */
 interface TransactionHistoryProps {
   walletAddress: string;
 }
 
+/**
+ * Transaction history section for swaps and liquidity activity.
+ *
+ * @param props.walletAddress - Current wallet address used to request history data.
+ * @returns A history panel with tabs, date filters, and paginated transaction tables.
+ */
 export function TransactionHistory({ walletAddress }: TransactionHistoryProps) {
   const [activeTab, setActiveTab] = useState<Tab>("swaps");
   const [page, setPage] = useState(1);
