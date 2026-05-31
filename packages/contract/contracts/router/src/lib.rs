@@ -88,10 +88,22 @@ pub struct Router;
 
 #[contractimpl]
 impl Router {
+    /// Return the canonical contract name for the router.
+    ///
+    /// # Returns
+    /// The router contract `Symbol`.
     pub fn name(_env: Env) -> Symbol {
         Symbol::new(&_env, "router")
     }
 
+    /// Initialize the router with the address of the pool factory contract.
+    ///
+    /// # Arguments
+    /// * `env` — Soroban environment context.
+    /// * `factory` — Address of the pool factory contract used to resolve pools.
+    ///
+    /// # Panics
+    /// Panics if the router has already been initialized.
     pub fn initialize(env: Env, factory: Address) {
         if env
             .storage()
@@ -109,6 +121,16 @@ impl Router {
             .set(&DataKey::Factory, &factory);
     }
 
+    /// Return the current factory contract address stored by the router.
+    ///
+    /// # Arguments
+    /// * `env` — Soroban environment context.
+    ///
+    /// # Returns
+    /// The stored factory contract `Address`.
+    ///
+    /// # Panics
+    /// Panics if the router has not been initialized.
     pub fn get_factory(env: Env) -> Address {
         env.storage()
             .instance()
@@ -117,6 +139,21 @@ impl Router {
     }
 
     /// Swap an exact amount of `token_in` for at least `amount_out_min` of `token_out`.
+    ///
+    /// # Arguments
+    /// * `env` — Soroban environment context.
+    /// * `params` — Exact input swap parameters.
+    ///   * `token_in` — Address of the token to sell.
+    ///   * `token_out` — Address of the token to buy.
+    ///   * `fee` — Pool fee tier to route through.
+    ///   * `recipient` — Address receiving the output tokens.
+    ///   * `deadline` — Unix timestamp after which the swap reverts.
+    ///   * `amount_in` — Exact amount of input tokens to swap.
+    ///   * `amount_out_min` — Minimum acceptable output amount.
+    ///   * `sqrt_price_limit_x96` — Price limit for the swap.
+    ///
+    /// # Returns
+    /// A `SwapResult` containing the actual input and output amounts.
     pub fn exact_input_single(env: Env, params: ExactInputSingleParams) -> SwapResult {
         check_deadline(&env, params.deadline);
         if params.amount_in == 0 {
@@ -156,6 +193,21 @@ impl Router {
     }
 
     /// Swap at most `amount_in_max` of `token_in` for an exact amount of `token_out`.
+    ///
+    /// # Arguments
+    /// * `env` — Soroban environment context.
+    /// * `params` — Exact output swap parameters.
+    ///   * `token_in` — Address of the token to sell.
+    ///   * `token_out` — Address of the token to buy.
+    ///   * `fee` — Pool fee tier to route through.
+    ///   * `recipient` — Address receiving the output tokens.
+    ///   * `deadline` — Unix timestamp after which the swap reverts.
+    ///   * `amount_out` — Exact amount of output tokens desired.
+    ///   * `amount_in_max` — Maximum acceptable input amount.
+    ///   * `sqrt_price_limit_x96` — Price limit for the swap.
+    ///
+    /// # Returns
+    /// A `SwapResult` containing the actual input and output amounts.
     pub fn exact_output_single(env: Env, params: ExactOutputSingleParams) -> SwapResult {
         check_deadline(&env, params.deadline);
         if params.amount_out == 0 {
@@ -193,7 +245,6 @@ impl Router {
             amount_out,
         }
     }
-}
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
