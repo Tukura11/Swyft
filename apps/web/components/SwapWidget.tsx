@@ -396,7 +396,7 @@ export function SwapWidget({
             No tokens available
           </p>
           <p className="text-xs text-zinc-400">
-            There are no tradeable tokens at the moment. Check back soon.
+            There are no tradeable tokens available right now. Refresh or try again later.
           </p>
         </div>
       </div>
