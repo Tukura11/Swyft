@@ -51,10 +51,10 @@ beforeEach(() => {
 
 describe('prisma seed', () => {
   async function runSeed() {
-    // Re-require each time so module-level code (main()) runs fresh
+    // Re-require each time so the seed module re-executes with a fresh PrismaClient
     jest.resetModules();
 
-    // Re-apply mock after resetModules
+    // Re-apply mock after resetModules so the freshly-imported module gets the mock
     jest.mock('@prisma/client', () => ({
       PrismaClient: jest.fn().mockImplementation(() => ({
         token: { upsert: mockUpsert },
@@ -66,10 +66,10 @@ describe('prisma seed', () => {
       })),
     }));
 
-    // Dynamically import so the top-level main() call executes
-    await import('../../../../prisma/seed');
-    // Allow all pending promises to settle
-    await new Promise((r) => setImmediate(r));
+    // Import the module and explicitly call main() — the require.main === module
+    // guard in seed.ts prevents main() from auto-running during import in tests.
+    const { main } = await import('../../../../prisma/seed');
+    await main();
   }
 
   it('upserts USDC token with correct address', async () => {

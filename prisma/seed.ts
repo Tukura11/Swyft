@@ -45,141 +45,140 @@ class Spinner {
 export async function main() {
   const spinner = new Spinner();
 
-  // ── Tokens ────────────────────────────────────────────────────────────────
-  spinner.start('Seeding tokens…');
-  const token0Data: Prisma.TokenCreateInput = {
-    address: 'GA5ZSEJYB37JRC5AVCIA5MOP4RHTM335X2KGX3IHOJAPP5RE34K4KZVN',
-    symbol: 'USDC',
-    name: 'USD Coin',
-    decimals: 6,
-    logoUri: 'https://example.com/usdc.png',
-  };
+  try {
+    // ── Tokens ──────────────────────────────────────────────────────────────
+    spinner.start('Seeding tokens…');
+    const token0Data: Prisma.TokenCreateInput = {
+      address: 'GA5ZSEJYB37JRC5AVCIA5MOP4RHTM335X2KGX3IHOJAPP5RE34K4KZVN',
+      symbol: 'USDC',
+      name: 'USD Coin',
+      decimals: 6,
+      logoUri: 'https://example.com/usdc.png',
+    };
 
-  const token0 = await prisma.token.upsert({
-    where: { address: token0Data.address },
-    update: {},
-    create: token0Data,
-  });
+    const token0 = await prisma.token.upsert({
+      where: { address: token0Data.address },
+      update: {},
+      create: token0Data,
+    });
 
-  const token1Data: Prisma.TokenCreateInput = {
-    address: 'GBDEVU63Y6NTHJQQZIKVTC23NWLQVP3WJ2RI2OTSJTNYOIGICST6DUXR',
-    symbol: 'XLM',
-    name: 'Stellar Lumens',
-    decimals: 7,
-    logoUri: 'https://example.com/xlm.png',
-  };
+    const token1Data: Prisma.TokenCreateInput = {
+      address: 'GBDEVU63Y6NTHJQQZIKVTC23NWLQVP3WJ2RI2OTSJTNYOIGICST6DUXR',
+      symbol: 'XLM',
+      name: 'Stellar Lumens',
+      decimals: 7,
+      logoUri: 'https://example.com/xlm.png',
+    };
 
-  const token1 = await prisma.token.upsert({
-    where: { address: token1Data.address },
-    update: {},
-    create: token1Data,
-  });
-  spinner.stop(true, `Tokens seeded  (${token0.symbol}, ${token1.symbol})`);
+    const token1 = await prisma.token.upsert({
+      where: { address: token1Data.address },
+      update: {},
+      create: token1Data,
+    });
+    spinner.stop(true, `Tokens seeded  (${token0.symbol}, ${token1.symbol})`);
 
-  // ── Pool ──────────────────────────────────────────────────────────────────
-  spinner.start('Seeding pool…');
-  const poolData: Prisma.PoolCreateInput = {
-    id: 'test-pool-1',
-    token0Address: token0.address,
-    token1Address: token1.address,
-    feeTier: 3000,
-    currentSqrtPrice: '79228162514264337593543950336',
-    currentTick: 0,
-    liquidity: '1000000000000000000',
-    tvl: '2000000000',
-    volume24h: '100000000',
-    feeApr: '0.05',
-  };
+    // ── Pool ────────────────────────────────────────────────────────────────
+    spinner.start('Seeding pool…');
+    const poolData: Prisma.PoolCreateInput = {
+      id: 'test-pool-1',
+      token0Address: token0.address,
+      token1Address: token1.address,
+      feeTier: 3000,
+      currentSqrtPrice: '79228162514264337593543950336',
+      currentTick: 0,
+      liquidity: '1000000000000000000',
+      tvl: '2000000000',
+      volume24h: '100000000',
+      feeApr: '0.05',
+    };
 
-  const pool = await prisma.pool.upsert({
-    where: { id: poolData.id },
-    update: {},
-    create: poolData,
-  });
-  spinner.stop(true, `Pool seeded    (${pool.id})`);
+    const pool = await prisma.pool.upsert({
+      where: { id: poolData.id },
+      update: {},
+      create: poolData,
+    });
+    spinner.stop(true, `Pool seeded    (${pool.id})`);
 
-  // ── Position ──────────────────────────────────────────────────────────────
-  spinner.start('Seeding position…');
-  const positionData: Prisma.PositionCreateInput = {
-    id: 'test-position-1',
-    poolId: pool.id,
-    ownerAddress: 'GCEZWKCA5VLDNRLN3RPRJMRZOX3Z6G5CHCGSNFHEYVXM3XOJMDS674JZ',
-    tokenId: '1',
-    lowerTick: -60,
-    upperTick: 60,
-    liquidity: '1000000000000000000',
-    feesCollected0: '0',
-    feesCollected1: '0',
-  };
-
-  await prisma.position.upsert({
-    where: { id: positionData.id },
-    update: {},
-    create: positionData,
-  });
-  spinner.stop(true, 'Position seeded (test-position-1)');
-
-  // ── Swaps ─────────────────────────────────────────────────────────────────
-  spinner.start('Seeding swaps…');
-  const swapData: Prisma.SwapCreateManyInput[] = [
-    {
+    // ── Position ────────────────────────────────────────────────────────────
+    spinner.start('Seeding position…');
+    const positionData: Prisma.PositionCreateInput = {
+      id: 'test-position-1',
       poolId: pool.id,
-      senderAddress: 'GCEZWKCA5VLDNRLN3RPRJMRZOX3Z6G5CHCGSNFHEYVXM3XOJMDS674JZ',
-      recipientAddress: 'GCEZWKCA5VLDNRLN3RPRJMRZOX3Z6G5CHCGSNFHEYVXM3XOJMDS674JZ',
-      amount0: '1000000',
-      amount1: '0',
-      sqrtPriceAfter: '79228162514264337593543950336',
-      tickAfter: 0,
-      transactionHash: 'test-tx-1',
-    },
-    {
-      poolId: pool.id,
-      senderAddress: 'GCEZWKCA5VLDNRLN3RPRJMRZOX3Z6G5CHCGSNFHEYVXM3XOJMDS674JZ',
-      recipientAddress: 'GCEZWKCA5VLDNRLN3RPRJMRZOX3Z6G5CHCGSNFHEYVXM3XOJMDS674JZ',
-      amount0: '0',
-      amount1: '10000000',
-      sqrtPriceAfter: '79228162514264337593543950336',
-      tickAfter: 0,
-      transactionHash: 'test-tx-2',
-    },
-  ];
+      ownerAddress: 'GCEZWKCA5VLDNRLN3RPRJMRZOX3Z6G5CHCGSNFHEYVXM3XOJMDS674JZ',
+      tokenId: '1',
+      lowerTick: -60,
+      upperTick: 60,
+      liquidity: '1000000000000000000',
+      feesCollected0: '0',
+      feesCollected1: '0',
+    };
 
-  await prisma.swap.createMany({
-    data: swapData,
-  });
-  spinner.stop(true, 'Swaps seeded   (2 records)');
+    await prisma.position.upsert({
+      where: { id: positionData.id },
+      update: {},
+      create: positionData,
+    });
+    spinner.stop(true, 'Position seeded (test-position-1)');
 
-  // ── Price candles ─────────────────────────────────────────────────────────
-  spinner.start('Seeding price candles…');
-  const priceCandleData: Prisma.PriceCandleCreateManyInput[] = [
-    {
-      poolId: pool.id,
-      open: 1.0,
-      high: 1.05,
-      low: 0.95,
-      close: 1.02,
-      volumeUsd: 1000000.0,
-      periodStart: new Date(),
-      interval: '1h',
-    },
-  ];
+    // ── Swaps ────────────────────────────────────────────────────────────────
+    spinner.start('Seeding swaps…');
+    const swapData: Prisma.SwapCreateManyInput[] = [
+      {
+        poolId: pool.id,
+        senderAddress: 'GCEZWKCA5VLDNRLN3RPRJMRZOX3Z6G5CHCGSNFHEYVXM3XOJMDS674JZ',
+        recipientAddress: 'GCEZWKCA5VLDNRLN3RPRJMRZOX3Z6G5CHCGSNFHEYVXM3XOJMDS674JZ',
+        amount0: '1000000',
+        amount1: '0',
+        sqrtPriceAfter: '79228162514264337593543950336',
+        tickAfter: 0,
+        transactionHash: 'test-tx-1',
+      },
+      {
+        poolId: pool.id,
+        senderAddress: 'GCEZWKCA5VLDNRLN3RPRJMRZOX3Z6G5CHCGSNFHEYVXM3XOJMDS674JZ',
+        recipientAddress: 'GCEZWKCA5VLDNRLN3RPRJMRZOX3Z6G5CHCGSNFHEYVXM3XOJMDS674JZ',
+        amount0: '0',
+        amount1: '10000000',
+        sqrtPriceAfter: '79228162514264337593543950336',
+        tickAfter: 0,
+        transactionHash: 'test-tx-2',
+      },
+    ];
 
-  await prisma.priceCandle.createMany({
-    data: priceCandleData,
-  });
-  spinner.stop(true, 'Price candles seeded (1 record)');
+    await prisma.swap.createMany({
+      data: swapData,
+    });
+    spinner.stop(true, 'Swaps seeded   (2 records)');
 
-  console.log('\nDatabase seeded successfully ✔');
+    // ── Price candles ────────────────────────────────────────────────────────
+    spinner.start('Seeding price candles…');
+    const priceCandleData: Prisma.PriceCandleCreateManyInput[] = [
+      {
+        poolId: pool.id,
+        open: 1.0,
+        high: 1.05,
+        low: 0.95,
+        close: 1.02,
+        volumeUsd: 1000000.0,
+        periodStart: new Date(),
+        interval: '1h',
+      },
+    ];
+
+    await prisma.priceCandle.createMany({
+      data: priceCandleData,
+    });
+    spinner.stop(true, 'Price candles seeded (1 record)');
+
+    console.log('\nDatabase seeded successfully ✔');
+  } finally {
+    await prisma.$disconnect();
+  }
 }
 
 if (require.main === module) {
-  main()
-    .then(async () => {
-      await prisma.$disconnect();
-    })
-    .catch(async (e) => {
-      console.error('\nSeed failed:', e);
-      await prisma.$disconnect();
-      process.exit(1);
-    });
+  main().catch((e) => {
+    console.error('\nSeed failed:', e);
+    process.exit(1);
+  });
 }
