@@ -105,6 +105,9 @@ const loadingState = new LoadingStateTracker();
  * This function also tracks and asserts the loading state to verify:
  * 1. Loading indicator is active during the operation
  * 2. Actions are disabled (cannot start new operations) while loading
+ * @param label - Human-readable label shown next to the spinner
+ * @param fn - Async function to execute while the spinner is active
+ * @returns The resolved value of `fn`
  */
 async function withSpinner<T>(label: string, fn: () => Promise<T>): Promise<T> {
   const isTTY = process.stdout.isTTY;
@@ -179,6 +182,11 @@ interface HorizonAccountResponse {
   balances: HorizonBalance[];
 }
 
+/**
+ * Fund a Stellar account on testnet using the Friendbot faucet.
+ * @param keypair - The keypair whose public key will be funded
+ * @returns Resolves when funding succeeds; throws on HTTP error
+ */
 async function fundAccount(keypair: Keypair): Promise<void> {
   const url = `${FRIENDBOT_URL}?addr=${keypair.publicKey()}`;
   const res = await fetch(url);
@@ -189,6 +197,9 @@ async function fundAccount(keypair: Keypair): Promise<void> {
 /**
  * Retrieve balance for a specific asset code on a given account.
  * Returns 0 when the account is not found or the asset is absent.
+ * @param publicKey - Stellar public key of the account to query
+ * @param assetCode - Asset code to look up (e.g. "USDC")
+ * @returns The balance as a floating-point number, or 0 if not found
  */
 async function getBalance(publicKey: string, assetCode: string): Promise<number> {
   const res = await fetch(`${HORIZON_URL}/accounts/${publicKey}`);
@@ -198,6 +209,12 @@ async function getBalance(publicKey: string, assetCode: string): Promise<number>
   return bal ? parseFloat(bal.balance) : 0;
 }
 
+/**
+ * Retrieve the native XLM balance for a given account.
+ * Returns 0 when the account is not found.
+ * @param publicKey - Stellar public key of the account to query
+ * @returns The XLM balance as a floating-point number, or 0 if not found
+ */
 async function getNativeBalance(publicKey: string): Promise<number> {
   const res = await fetch(`${HORIZON_URL}/accounts/${publicKey}`);
   if (!res.ok) return 0;
@@ -274,6 +291,7 @@ interface Deployments {
 /**
  * Deploy all contracts in dependency order. Uses `stellarCli` which in turn
  * relies on `DEPLOYER_SECRET` to sign transactions.
+ * @returns Object containing the deployed contract IDs for each contract
  */
 async function deployAll(): Promise<Deployments> {
   log("Deploying contracts to testnet…");
@@ -303,22 +321,50 @@ async function deployAll(): Promise<Deployments> {
 // Test helpers
 // ---------------------------------------------------------------------------
 
+/**
+ * Serialize a Stellar address into a Soroban JSON argument.
+ * @param address - Stellar account or contract address (G… or C…)
+ * @returns JSON string of the form `{"address":"…"}`
+ */
 function scAddressArg(address: string): string {
   return JSON.stringify({ address });
 }
 
+/**
+ * Serialize an unsigned 32-bit integer into a Soroban JSON argument.
+ * @param n - Non-negative integer value (0 – 4 294 967 295)
+ * @returns JSON string of the form `{"u32":n}`
+ */
 function scU32(n: number): string {
   return JSON.stringify({ u32: n });
 }
 
+/**
+ * Serialize an unsigned 128-bit integer into a Soroban JSON argument.
+ * The value is split into high and low 64-bit halves.
+ * @param n - Non-negative bigint value (0 – 2^128 − 1)
+ * @returns JSON string of the form `{"u128":{"hi":…,"lo":…}}`
+ */
 function scU128(n: bigint): string {
   return JSON.stringify({ u128: { hi: Number(n >> BigInt(64)), lo: Number(n & ((BigInt(1) << BigInt(64)) - BigInt(1))) } });
 }
 
+/**
+ * Serialize a signed 32-bit integer into a Soroban JSON argument.
+ * @param n - Integer value (−2 147 483 648 – 2 147 483 647)
+ * @returns JSON string of the form `{"i32":n}`
+ */
 function scI32(n: number): string {
   return JSON.stringify({ i32: n });
 }
 
+/**
+ * Parse a raw CLI output string into a plain Stellar address.
+ * Handles both JSON-encoded `{address}` / `{contract_id}` objects and
+ * bare address strings. Falls back to trimming the raw input on parse error.
+ * @param raw - Raw string returned by the `stellar` CLI
+ * @returns The extracted address string
+ */
 function parseSCAddress(raw: string): string {
   try {
     const parsed = JSON.parse(raw) as { address?: string; contract_id?: string } | null;
