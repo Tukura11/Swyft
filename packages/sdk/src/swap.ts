@@ -27,12 +27,15 @@ export const toStellarAddress = (s: string): StellarAddress =>
 /** Cast a plain string to {@link RawAmount}. Use only at trust boundaries. */
 export const toRawAmount = (s: string): RawAmount => s as RawAmount;
 
+/** Cast a plain string to {@link XdrBase64}. Use only at trust boundaries. */
+export const toXdrBase64 = (s: string): XdrBase64 => s as XdrBase64;
+
 // ── Interfaces ────────────────────────────────────────────────────────────────
 
 /** Identifies a pool by its two token addresses. */
 export interface PoolId {
-  readonly token0: string;
-  readonly token1: string;
+  readonly token0: StellarAddress;
+  readonly token1: StellarAddress;
 }
 
 /**

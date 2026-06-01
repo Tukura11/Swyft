@@ -9,5 +9,5 @@ export { getPool, getPosition, getPositionWithLoading, getTick, EMPTY_POSITION_M
 export type { PoolState, PositionState, TickState } from './types';
 export { SwyftRpcError } from './types';
 
-export { buildSwapTx, toStellarAddress, toRawAmount } from './swap';
+export { buildSwapTx, toStellarAddress, toRawAmount, toXdrBase64 } from './swap';
 export type { PoolId, SwapTxParams, SwapUnsignedTx, StellarAddress, RawAmount, XdrBase64 } from './swap';
