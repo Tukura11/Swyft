@@ -72,7 +72,7 @@ impl ClPool {
             .get::<DataKey, bool>(&DataKey::Initialized)
             .unwrap_or(false)
         {
-            panic_with_error!(&env, PoolError::AlreadyInitialized);
+            panic_pool_error(&env, PoolError::AlreadyInitialized);
         }
         env.storage().instance().set(&DataKey::Initialized, &true);
         env.storage().instance().set(&DataKey::Token0, &token_0);
@@ -112,10 +112,10 @@ impl ClPool {
         ensure_initialized(&env);
 
         if tick_lower >= tick_upper {
-            panic_with_error!(&env, PoolError::InvalidTickRange);
+            panic_pool_error(&env, PoolError::InvalidTickRange);
         }
         if liquidity == 0 {
-            panic_with_error!(&env, PoolError::ZeroLiquidity);
+            panic_pool_error(&env, PoolError::ZeroLiquidity);
         }
 
         let sqrt_price: u128 = env
@@ -349,10 +349,10 @@ impl ClPool {
             .storage()
             .persistent()
             .get(&DataKey::Position(position_id))
-            .unwrap_or_else(|| panic_with_error!(&env, PoolError::PositionNotFound));
+            .unwrap_or_else(|| panic_pool_error(&env, PoolError::PositionNotFound));
 
         if position.owner != owner {
-            panic_with_error!(&env, PoolError::Unauthorized);
+            panic_pool_error(&env, PoolError::Unauthorized);
         }
 
         let current_tick: i32 = env
@@ -424,13 +424,13 @@ impl ClPool {
             .storage()
             .persistent()
             .get(&DataKey::Position(position_id))
-            .unwrap_or_else(|| panic_with_error!(&env, PoolError::PositionNotFound));
+            .unwrap_or_else(|| panic_pool_error(&env, PoolError::PositionNotFound));
 
         if position.owner != owner {
-            panic_with_error!(&env, PoolError::Unauthorized);
+            panic_pool_error(&env, PoolError::Unauthorized);
         }
         if liquidity_to_remove == 0 || liquidity_to_remove > position.liquidity {
-            panic_with_error!(&env, PoolError::ZeroLiquidity);
+            panic_pool_error(&env, PoolError::ZeroLiquidity);
         }
 
         let sqrt_price: u128 = env
@@ -566,11 +566,11 @@ pub fn sqrt_price_to_tick(sqrt_price_x96: u128) -> i32 {
     if sqrt_price_x96 >= Q96 {
         let ratio = (sqrt_price_x96 - Q96) as i64;
         let q = Q96 as i64;
-        ((ratio * 20000) / q) as i32
+        ((ratio * 20000) / q).try_into().unwrap_or(i32::MAX)
     } else {
         let ratio = (Q96 - sqrt_price_x96) as i64;
         let q = Q96 as i64;
-        -((ratio * 20000) / q) as i32
+        (-((ratio * 20000) / q)).try_into().unwrap_or(i32::MIN)
     }
 }
 
@@ -655,8 +655,10 @@ fn ensure_initialized(env: &Env) {
         .get::<DataKey, bool>(&DataKey::Initialized)
         .unwrap_or(false)
     {
-        panic_with_error!(env, PoolError::NotInitialized);
+        panic_pool_error(env, PoolError::NotInitialized);
     }
 }
 
-mod test;
+fn panic_pool_error(env: &Env, error: PoolError) -> ! {
+    env.panic_with_error(soroban_sdk::Error::from_contract_error(error as u32))
+}

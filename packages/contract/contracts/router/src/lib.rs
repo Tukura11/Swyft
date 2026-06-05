@@ -1,5 +1,5 @@
 #![no_std]
-use soroban_sdk::{contract, contractimpl, contracttype, contracterror, symbol_short, Address, Env, Symbol};
+use soroban_sdk::{contract, contractimpl, contracttype, contracterror, symbol_short, Address, Env, Symbol, IntoVal};
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -58,11 +58,6 @@ pub enum RouterError {
     AlreadyInitialized = 7,
 }
 
-impl From<RouterError> for soroban_sdk::Error {
-    fn from(e: RouterError) -> Self {
-        soroban_sdk::Error::from_contract_error(e as u32)
-    }
-}
 
 // ── Pool interface (cross-contract call stubs) ────────────────────────────────
 
@@ -111,7 +106,7 @@ impl Router {
             .get::<DataKey, bool>(&DataKey::Initialized)
             .unwrap_or(false)
         {
-            panic_with_error!(&env, RouterError::AlreadyInitialized);
+            panic_router(&env, RouterError::AlreadyInitialized);
         }
         env.storage()
             .instance()
@@ -245,6 +240,7 @@ impl Router {
             amount_out,
         }
     }
+}
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -278,12 +274,7 @@ fn get_pool(env: &Env, token_in: &Address, token_out: &Address, fee: u32) -> Add
             fee.into_val(env),
         ],
     );
-    pool.unwrap_or_else(|| {
-        if pool.is_none() {
-            panic_router(env, RouterError::EmptyData);
-        }
-        panic_router(env, RouterError::PoolNotFound)
-    })
+    pool.unwrap_or_else(|| panic_router(env, RouterError::PoolNotFound))
 }
 
 /// Execute a single-hop swap against the pool contract.
@@ -312,7 +303,6 @@ fn execute_swap(
         ],
     );
     (result.amount_in, result.amount_out)
-}
 }
 
 #[cfg(test)]
