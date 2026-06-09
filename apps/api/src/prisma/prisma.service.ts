@@ -4,7 +4,7 @@ import {
   OnModuleDestroy,
   OnModuleInit,
 } from '@nestjs/common';
-import { PrismaClient } from '@prisma/client';
+import { Prisma, PrismaClient } from '@prisma/client';
 import { DbMetricsService } from '../metrics/db-metrics.service';
 
 @Injectable()
@@ -22,24 +22,21 @@ export class PrismaService
   }
 
   onModuleInit() {
-    this.$on(
-      'query' as never,
-      (e: { query: string; params: string; duration: number }) => {
-        this.dbMetrics.record(e.duration);
+    this.$on('query', (e: Prisma.QueryEvent) => {
+      this.dbMetrics.record(e.duration);
 
-        if (e.duration >= 500) {
-          this.logger.error(
-            `SLOW_QUERY duration=${e.duration}ms query="${e.query}" params=${e.params}`,
-          );
-        } else if (e.duration >= this.slowThreshold) {
-          this.logger.warn(
-            `SLOW_QUERY duration=${e.duration}ms query="${e.query}"`,
-          );
-        } else {
-          this.logger.debug(`query duration=${e.duration}ms`);
-        }
-      },
-    );
+      if (e.duration >= 500) {
+        this.logger.error(
+          `SLOW_QUERY duration=${e.duration}ms query="${e.query}" params=${e.params}`,
+        );
+      } else if (e.duration >= this.slowThreshold) {
+        this.logger.warn(
+          `SLOW_QUERY duration=${e.duration}ms query="${e.query}"`,
+        );
+      } else {
+        this.logger.debug(`query duration=${e.duration}ms`);
+      }
+    });
 
     return this.$connect();
   }
