@@ -22,5 +22,6 @@
       "cache": false,
       "outputs": ["deployments/testnet.json"]
     }
-  }
+  },
+  "globalEnv": ["DATABASE_URL"]
 }

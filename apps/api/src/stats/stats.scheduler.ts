@@ -14,10 +14,14 @@ export class StatsScheduler {
 
   @Cron(CronExpression.EVERY_5_MINUTES)
   async scheduleAggregation(): Promise<void> {
-    await this.queue.add(STATS_JOB_NAME, {}, {
-      ...defaultJobOptions,
-      jobId: `pool-stats-${Math.floor(Date.now() / 300_000)}`, // deduplicate within 5-min window
-    });
+    await this.queue.add(
+      STATS_JOB_NAME,
+      {},
+      {
+        ...defaultJobOptions,
+        jobId: `pool-stats-${Math.floor(Date.now() / 300_000)}`, // deduplicate within 5-min window
+      },
+    );
     this.logger.log('Enqueued pool stats aggregation job');
   }
 }

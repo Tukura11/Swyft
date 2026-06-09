@@ -1,4 +1,4 @@
-import { SorobanRpc, Contract, xdr, scValToNative, Transaction, FeeBumpTransaction } from '@stellar/stellar-sdk';
+import { rpc, Contract, xdr, scValToNative, Transaction, FeeBumpTransaction } from '@stellar/stellar-sdk';
 import { PoolState, PositionState, TickState, SwyftRpcError } from './types';
 
 /**
@@ -14,7 +14,7 @@ async function callContract(
   method: string,
   args: xdr.ScVal[] = []
 ): Promise<xdr.ScVal> {
-  const server = new SorobanRpc.Server(rpcUrl, { allowHttp: rpcUrl.startsWith('http://') });
+  const server = new rpc.Server(rpcUrl, { allowHttp: rpcUrl.startsWith('http://') });
   const contract = new Contract(contractAddress);
   const op = contract.call(method, ...args);
 
@@ -27,11 +27,11 @@ async function callContract(
       op as unknown as Transaction | FeeBumpTransaction,
     );
 
-    if (SorobanRpc.Api.isSimulationError(result)) {
+    if (rpc.Api.isSimulationError(result)) {
       throw new SwyftRpcError(`Simulation failed for ${method}: ${result.error}`);
     }
 
-    const sim = result as SorobanRpc.Api.SimulateTransactionSuccessResponse;
+    const sim = result as rpc.Api.SimulateTransactionSuccessResponse;
     if (!sim.result) {
       throw new SwyftRpcError(`No result returned for ${method} on ${contractAddress}`);
     }

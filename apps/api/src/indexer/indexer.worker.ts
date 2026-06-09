@@ -1,4 +1,9 @@
-import { Injectable, Logger, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  OnModuleDestroy,
+  OnModuleInit,
+} from '@nestjs/common';
 import { Worker, Job, QueueEvents } from 'bullmq';
 import { PrismaClient } from '@prisma/client';
 import {
@@ -18,6 +23,7 @@ export class IndexerWorker implements OnModuleInit, OnModuleDestroy {
   private readonly workers: Worker[] = [];
   private readonly queueEvents: QueueEvents[] = [];
   private _isLoading = false;
+  private _isReady = false;
 
   get isLoading(): boolean {
     return this._isLoading;
@@ -34,11 +40,13 @@ export class IndexerWorker implements OnModuleInit, OnModuleDestroy {
       this.makeWorker<SwapProcessedJobData>(QUEUE_NAMES.SWAP_PROCESSED, (job) =>
         this.handleSwapProcessed(job),
       ),
-      this.makeWorker<PositionMintedJobData>(QUEUE_NAMES.POSITION_MINTED, (job) =>
-        this.handlePositionMinted(job),
+      this.makeWorker<PositionMintedJobData>(
+        QUEUE_NAMES.POSITION_MINTED,
+        (job) => this.handlePositionMinted(job),
       ),
-      this.makeWorker<PositionBurnedJobData>(QUEUE_NAMES.POSITION_BURNED, (job) =>
-        this.handlePositionBurned(job),
+      this.makeWorker<PositionBurnedJobData>(
+        QUEUE_NAMES.POSITION_BURNED,
+        (job) => this.handlePositionBurned(job),
       ),
       this.makeWorker<FeesCollectedJobData>(QUEUE_NAMES.FEES_COLLECTED, (job) =>
         this.handleFeesCollected(job),
@@ -48,7 +56,9 @@ export class IndexerWorker implements OnModuleInit, OnModuleDestroy {
     for (const name of Object.values(QUEUE_NAMES)) {
       const qe = new QueueEvents(name, { connection });
       qe.on('failed', ({ jobId, failedReason }) => {
-        this.logger.error(`[DLQ] queue=${name} jobId=${jobId} reason=${failedReason}`);
+        this.logger.error(
+          `[DLQ] queue=${name} jobId=${jobId} reason=${failedReason}`,
+        );
       });
       this.queueEvents.push(qe);
     }
@@ -77,7 +87,9 @@ export class IndexerWorker implements OnModuleInit, OnModuleDestroy {
     const { connection } = makeQueueOptions();
     const guardedHandler = async (job: Job<T>) => {
       if (!this._isReady) {
-        this.logger.warn(`queue=${queueName} jobId=${job.id} skipped — indexer not ready`);
+        this.logger.warn(
+          `queue=${queueName} jobId=${job.id} skipped — indexer not ready`,
+        );
         return;
       }
       return handler(job);
@@ -99,15 +111,19 @@ export class IndexerWorker implements OnModuleInit, OnModuleDestroy {
 
   private async logQueueDepths() {
     for (const worker of this.workers) {
-      const counts = await worker.client.then(async (client) => {
-        const waiting = await client.llen(`bull:${worker.name}:wait`);
-        const active = await client.llen(`bull:${worker.name}:active`);
-        return { waiting, active };
-      }).catch(() => null);
+      const counts = await worker.client
+        .then(async (client) => {
+          const waiting = await client.llen(`bull:${worker.name}:wait`);
+          const active = await client.llen(`bull:${worker.name}:active`);
+          return { waiting, active };
+        })
+        .catch(() => null);
 
       if (counts) {
         if (counts.waiting === 0 && counts.active === 0) {
-          this.logger.debug(`queue=${worker.name} is empty — no events to process`);
+          this.logger.debug(
+            `queue=${worker.name} is empty — no events to process`,
+          );
         } else {
           this.logger.log(
             `queue=${worker.name} waiting=${counts.waiting} active=${counts.active}`,
@@ -122,14 +138,17 @@ export class IndexerWorker implements OnModuleInit, OnModuleDestroy {
    * non-empty. Logs a warning and skips persistence for empty payloads so
    * a malformed event never crashes the worker or breaks downstream consumers.
    */
-  private guardEmptyData(jobId: string | undefined, data: Record<string, unknown>): boolean {
+  private guardEmptyData(
+    jobId: string | undefined,
+    data: Record<string, unknown>,
+  ): boolean {
     const empty = Object.entries(data).filter(
       ([, v]) => v === null || v === undefined || v === '',
     );
     if (empty.length > 0) {
       this.logger.warn(
         `Skipping job ${jobId ?? 'unknown'} — empty fields: ${empty.map(([k]) => k).join(', ')}. ` +
-        'Check the upstream event emitter; no data was persisted for this event.',
+          'Check the upstream event emitter; no data was persisted for this event.',
       );
       return false;
     }
@@ -138,7 +157,8 @@ export class IndexerWorker implements OnModuleInit, OnModuleDestroy {
 
   private async handlePoolCreated(job: Job<PoolCreatedJobData>) {
     const d = job.data;
-    if (!this.guardEmptyData(job.id, d as unknown as Record<string, unknown>)) return;
+    if (!this.guardEmptyData(job.id, d as unknown as Record<string, unknown>))
+      return;
     await this.prisma.poolCreated.upsert({
       where: { eventId: d.eventId },
       update: {},
@@ -155,7 +175,8 @@ export class IndexerWorker implements OnModuleInit, OnModuleDestroy {
 
   private async handleSwapProcessed(job: Job<SwapProcessedJobData>) {
     const d = job.data;
-    if (!this.guardEmptyData(job.id, d as unknown as Record<string, unknown>)) return;
+    if (!this.guardEmptyData(job.id, d as unknown as Record<string, unknown>))
+      return;
     await this.prisma.swapProcessed.upsert({
       where: { eventId: d.eventId },
       update: {},
@@ -175,7 +196,8 @@ export class IndexerWorker implements OnModuleInit, OnModuleDestroy {
 
   private async handlePositionMinted(job: Job<PositionMintedJobData>) {
     const d = job.data;
-    if (!this.guardEmptyData(job.id, d as unknown as Record<string, unknown>)) return;
+    if (!this.guardEmptyData(job.id, d as unknown as Record<string, unknown>))
+      return;
     await this.prisma.positionMinted.upsert({
       where: { eventId: d.eventId },
       update: {},
@@ -194,7 +216,8 @@ export class IndexerWorker implements OnModuleInit, OnModuleDestroy {
 
   private async handlePositionBurned(job: Job<PositionBurnedJobData>) {
     const d = job.data;
-    if (!this.guardEmptyData(job.id, d as unknown as Record<string, unknown>)) return;
+    if (!this.guardEmptyData(job.id, d as unknown as Record<string, unknown>))
+      return;
     await this.prisma.positionBurned.upsert({
       where: { eventId: d.eventId },
       update: {},
@@ -213,7 +236,8 @@ export class IndexerWorker implements OnModuleInit, OnModuleDestroy {
 
   private async handleFeesCollected(job: Job<FeesCollectedJobData>) {
     const d = job.data;
-    if (!this.guardEmptyData(job.id, d as unknown as Record<string, unknown>)) return;
+    if (!this.guardEmptyData(job.id, d as unknown as Record<string, unknown>))
+      return;
     await this.prisma.feesCollected.upsert({
       where: { eventId: d.eventId },
       update: {},

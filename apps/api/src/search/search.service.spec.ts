@@ -12,7 +12,10 @@ describe('SearchService', () => {
   it('returns empty results for queries under two characters without hitting the database', async () => {
     const service = new SearchService(prisma as never);
 
-    await expect(service.search(' u ')).resolves.toEqual({ tokens: [], pools: [] });
+    await expect(service.search(' u ')).resolves.toEqual({
+      tokens: [],
+      pools: [],
+    });
     expect(prisma.$queryRawUnsafe).not.toHaveBeenCalled();
   });
 
@@ -33,7 +36,9 @@ describe('SearchService', () => {
       fee: '30',
     };
 
-    prisma.$queryRawUnsafe.mockResolvedValueOnce([token]).mockResolvedValueOnce([pool]);
+    prisma.$queryRawUnsafe
+      .mockResolvedValueOnce([token])
+      .mockResolvedValueOnce([pool]);
     const service = new SearchService(prisma as never);
 
     await expect(service.search('usd')).resolves.toEqual({
@@ -58,6 +63,9 @@ describe('SearchService', () => {
     prisma.$queryRawUnsafe.mockResolvedValue([]);
     const service = new SearchService(prisma as never);
 
-    await expect(service.search('zz')).resolves.toEqual({ tokens: [], pools: [] });
+    await expect(service.search('zz')).resolves.toEqual({
+      tokens: [],
+      pools: [],
+    });
   });
 });

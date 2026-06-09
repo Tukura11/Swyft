@@ -156,7 +156,7 @@ export class PoolsController {
   async getPoolById(@Param('id') id: string): Promise<PoolDetailDto> {
     const cacheKey = `pool:${id}`;
 
-    const cached = await this.cacheService.get(cacheKey);
+    const cached = await this.cacheService.get<PoolDetailDto>(cacheKey);
     if (cached) {
       return cached;
     }

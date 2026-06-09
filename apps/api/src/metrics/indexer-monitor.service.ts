@@ -1,4 +1,9 @@
-import { Injectable, Logger, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  OnModuleDestroy,
+  OnModuleInit,
+} from '@nestjs/common';
 import { Horizon } from '@stellar/stellar-sdk';
 import { CacheService } from '../cache/cache.service';
 
@@ -86,7 +91,9 @@ export class IndexerMonitorService implements OnModuleInit, OnModuleDestroy {
     // Sentry is optional — only call if the SDK is initialised
     try {
       // eslint-disable-next-line @typescript-eslint/no-require-imports
-      const Sentry = require('@sentry/node') as typeof import('@sentry/node');
+      const Sentry = require('@sentry/node') as {
+        captureMessage: (message: string, level: string) => void;
+      };
       Sentry.captureMessage(
         `Indexer critical lag: ${metrics.lagLedgers} ledgers (${metrics.lagSeconds}s)`,
         'error',

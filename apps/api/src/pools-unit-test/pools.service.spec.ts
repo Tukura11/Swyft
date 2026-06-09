@@ -3,7 +3,11 @@ import { NotFoundException } from '@nestjs/common';
 import { PoolsService } from '../pools/pools.service';
 import { PoolsRepository } from '../pools/pools.repository';
 import { CacheService } from '../cache/cache.service';
-import { createMockCacheService, createMockPoolsRepository, mockTick } from './mock-factories';
+import {
+  createMockCacheService,
+  createMockPoolsRepository,
+  mockTick,
+} from './mock-factories';
 
 describe('PoolsService', () => {
   let service: PoolsService;
@@ -42,7 +46,14 @@ describe('PoolsService', () => {
     });
 
     it('returns cached result and skips repository on cache hit', async () => {
-      const cached = { items: [], page: 1, limit: 10, total: 0, totalPages: 0, orderBy: 'tvl' };
+      const cached = {
+        items: [],
+        page: 1,
+        limit: 10,
+        total: 0,
+        totalPages: 0,
+        orderBy: 'tvl',
+      };
       cache.get.mockResolvedValue(cached);
 
       const result = await service.getPools({ page: 1, limit: 10 });
@@ -63,13 +74,20 @@ describe('PoolsService', () => {
     });
 
     it('returns ticks from repository on cache miss', async () => {
-      const ticks = [mockTick({ tickIndex: -100 }), mockTick({ tickIndex: 100 })];
+      const ticks = [
+        mockTick({ tickIndex: -100 }),
+        mockTick({ tickIndex: 100 }),
+      ];
       repo.getTicksByPoolId.mockResolvedValue(ticks);
 
       const result = await service.getPoolTicks(poolId);
 
       expect(result).toEqual(ticks);
-      expect(repo.getTicksByPoolId).toHaveBeenCalledWith(poolId, undefined, undefined);
+      expect(repo.getTicksByPoolId).toHaveBeenCalledWith(
+        poolId,
+        undefined,
+        undefined,
+      );
       expect(cache.set).toHaveBeenCalledTimes(1);
     });
 
@@ -100,12 +118,18 @@ describe('PoolsService', () => {
     });
 
     it('throws NotFoundException for unknown pool id', async () => {
-      await expect(service.getPoolTicks('unknown_id')).rejects.toThrow(NotFoundException);
+      repo.poolExists.mockResolvedValue(false);
+      await expect(service.getPoolTicks('unknown_id')).rejects.toThrow(
+        NotFoundException,
+      );
       expect(repo.getTicksByPoolId).not.toHaveBeenCalled();
     });
 
     it('does not cache on 404', async () => {
-      await expect(service.getPoolTicks('bad_id')).rejects.toThrow(NotFoundException);
+      repo.poolExists.mockResolvedValue(false);
+      await expect(service.getPoolTicks('bad_id')).rejects.toThrow(
+        NotFoundException,
+      );
       expect(cache.set).not.toHaveBeenCalled();
     });
 

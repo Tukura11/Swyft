@@ -33,7 +33,11 @@ describe('RateLimitMiddleware', () => {
     const res = response();
 
     await middleware.use(
-      { path: '/prices/XLM/USDC/candles', headers: {}, ip: '127.0.0.1' } as never,
+      {
+        path: '/prices/XLM/USDC/candles',
+        headers: {},
+        ip: '127.0.0.1',
+      } as never,
       res as never,
       next,
     );

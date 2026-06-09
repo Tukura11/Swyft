@@ -9,12 +9,14 @@ const mockWorkerClient = Promise.resolve({
   llen: jest.fn().mockResolvedValue(0),
 });
 
-const MockWorker = jest.fn().mockImplementation((_name: string, _handler: unknown) => ({
-  name: _name,
-  on: mockWorkerOn,
-  close: mockWorkerClose,
-  client: mockWorkerClient,
-}));
+const MockWorker = jest
+  .fn()
+  .mockImplementation((_name: string, _handler: unknown) => ({
+    name: _name,
+    on: mockWorkerOn,
+    close: mockWorkerClose,
+    client: mockWorkerClient,
+  }));
 
 const mockQueueEventsOn = jest.fn();
 const mockQueueEventsClose = jest.fn().mockResolvedValue(undefined);
@@ -61,8 +63,20 @@ jest.mock('@prisma/client', () => ({
 
 import { Test, TestingModule } from '@nestjs/testing';
 import { IndexerWorker } from './indexer.worker';
-import { IndexerModule, QUEUE_POOL_CREATED, QUEUE_SWAP_PROCESSED, QUEUE_POSITION_MINTED, QUEUE_POSITION_BURNED, QUEUE_FEES_COLLECTED } from './indexer.module';
-import { createQueue, makeQueueOptions, QUEUE_NAMES, defaultJobOptions } from './queues';
+import {
+  IndexerModule,
+  QUEUE_POOL_CREATED,
+  QUEUE_SWAP_PROCESSED,
+  QUEUE_POSITION_MINTED,
+  QUEUE_POSITION_BURNED,
+  QUEUE_FEES_COLLECTED,
+} from './indexer.module';
+import {
+  createQueue,
+  makeQueueOptions,
+  QUEUE_NAMES,
+  defaultJobOptions,
+} from './queues';
 import type {
   PoolCreatedJobData,
   SwapProcessedJobData,
@@ -105,7 +119,9 @@ describe('queues', () => {
       delete process.env.REDIS_URL;
 
       const opts = makeQueueOptions();
-      expect((opts.connection as { url: string }).url).toBe('redis://localhost:6379');
+      expect((opts.connection as { url: string }).url).toBe(
+        'redis://localhost:6379',
+      );
 
       process.env.REDIS_URL = original;
     });
@@ -115,7 +131,9 @@ describe('queues', () => {
       process.env.REDIS_URL = 'redis://custom-host:1234';
 
       const opts = makeQueueOptions();
-      expect((opts.connection as { url: string }).url).toBe('redis://custom-host:1234');
+      expect((opts.connection as { url: string }).url).toBe(
+        'redis://custom-host:1234',
+      );
 
       process.env.REDIS_URL = original;
     });
@@ -253,24 +271,34 @@ describe('IndexerWorker', () => {
     it('creates workers for all five queue names', () => {
       worker.onModuleInit();
       const calledNames = MockWorker.mock.calls.map((c) => c[0] as string);
-      expect(calledNames).toEqual(expect.arrayContaining(Object.values(QUEUE_NAMES)));
+      expect(calledNames).toEqual(
+        expect.arrayContaining(Object.values(QUEUE_NAMES)),
+      );
     });
 
     it('creates one QueueEvents listener per queue name', () => {
       worker.onModuleInit();
-      expect(MockQueueEvents).toHaveBeenCalledTimes(Object.keys(QUEUE_NAMES).length);
+      expect(MockQueueEvents).toHaveBeenCalledTimes(
+        Object.keys(QUEUE_NAMES).length,
+      );
     });
 
     it('registers a "failed" event listener on each QueueEvents instance', () => {
       worker.onModuleInit();
-      const failedCalls = mockQueueEventsOn.mock.calls.filter((c) => c[0] === 'failed');
+      const failedCalls = mockQueueEventsOn.mock.calls.filter(
+        (c) => c[0] === 'failed',
+      );
       expect(failedCalls).toHaveLength(Object.keys(QUEUE_NAMES).length);
     });
 
     it('registers "completed" and "failed" event listeners on each Worker', () => {
       worker.onModuleInit();
-      const completedCalls = mockWorkerOn.mock.calls.filter((c) => c[0] === 'completed');
-      const failedCalls = mockWorkerOn.mock.calls.filter((c) => c[0] === 'failed');
+      const completedCalls = mockWorkerOn.mock.calls.filter(
+        (c) => c[0] === 'completed',
+      );
+      const failedCalls = mockWorkerOn.mock.calls.filter(
+        (c) => c[0] === 'failed',
+      );
       expect(completedCalls).toHaveLength(Object.keys(QUEUE_NAMES).length);
       expect(failedCalls).toHaveLength(Object.keys(QUEUE_NAMES).length);
     });
@@ -287,8 +315,12 @@ describe('IndexerWorker', () => {
       worker.onModuleInit();
       await worker.onModuleDestroy();
 
-      expect(mockWorkerClose).toHaveBeenCalledTimes(Object.keys(QUEUE_NAMES).length);
-      expect(mockQueueEventsClose).toHaveBeenCalledTimes(Object.keys(QUEUE_NAMES).length);
+      expect(mockWorkerClose).toHaveBeenCalledTimes(
+        Object.keys(QUEUE_NAMES).length,
+      );
+      expect(mockQueueEventsClose).toHaveBeenCalledTimes(
+        Object.keys(QUEUE_NAMES).length,
+      );
     });
 
     it('disconnects Prisma on shutdown', async () => {
@@ -302,7 +334,9 @@ describe('IndexerWorker', () => {
   // ─── Job handlers (via Worker constructor callback) ────────────────────────
   // We extract the handler passed to the Worker constructor and invoke it directly.
 
-  function getHandlerForQueue(queueName: string): (job: Job<unknown>) => Promise<void> {
+  function getHandlerForQueue(
+    queueName: string,
+  ): (job: Job<unknown>) => Promise<void> {
     worker.onModuleInit();
     const call = MockWorker.mock.calls.find((c) => c[0] === queueName);
     if (!call) throw new Error(`No worker registered for queue: ${queueName}`);
@@ -326,7 +360,10 @@ describe('IndexerWorker', () => {
       expect(mockPrismaClient.poolCreated.upsert).toHaveBeenCalledWith(
         expect.objectContaining({
           where: { eventId: data.eventId },
-          create: expect.objectContaining({ eventId: data.eventId, poolId: data.poolId }),
+          create: expect.objectContaining({
+            eventId: data.eventId,
+            poolId: data.poolId,
+          }),
         }),
       );
     });
@@ -483,7 +520,9 @@ describe('IndexerWorker', () => {
 
   describe('empty data handling', () => {
     it('skips persistence and logs a warning when eventId is empty', async () => {
-      const warnSpy = jest.spyOn((worker as any).logger, 'warn').mockImplementation(() => {});
+      const warnSpy = jest
+        .spyOn((worker as any).logger, 'warn')
+        .mockImplementation(() => {});
       const handler = getHandlerForQueue(QUEUE_NAMES.POOL_CREATED);
 
       await handler(
@@ -503,7 +542,9 @@ describe('IndexerWorker', () => {
     });
 
     it('skips persistence and logs a warning when poolId is empty', async () => {
-      const warnSpy = jest.spyOn((worker as any).logger, 'warn').mockImplementation(() => {});
+      const warnSpy = jest
+        .spyOn((worker as any).logger, 'warn')
+        .mockImplementation(() => {});
       const handler = getHandlerForQueue(QUEUE_NAMES.SWAP_PROCESSED);
 
       await handler(
@@ -526,7 +567,9 @@ describe('IndexerWorker', () => {
     });
 
     it('skips persistence when FeesCollected recipient is empty', async () => {
-      const warnSpy = jest.spyOn((worker as any).logger, 'warn').mockImplementation(() => {});
+      const warnSpy = jest
+        .spyOn((worker as any).logger, 'warn')
+        .mockImplementation(() => {});
       const handler = getHandlerForQueue(QUEUE_NAMES.FEES_COLLECTED);
 
       await handler(

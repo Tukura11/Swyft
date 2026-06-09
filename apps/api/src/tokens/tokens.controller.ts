@@ -7,15 +7,20 @@ export class TokensController {
 
   @Get()
   async getTokens() {
-    return this.prisma.token.findMany({
+    const tokens = await this.prisma.token.findMany({
       orderBy: { symbol: 'asc' },
       select: {
-        contractAddress: true,
+        address: true,
         symbol: true,
         name: true,
         decimals: true,
         logoUri: true,
       },
     });
+
+    return tokens.map(({ address, ...rest }) => ({
+      contractAddress: address,
+      ...rest,
+    }));
   }
 }

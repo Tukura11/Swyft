@@ -1,13 +1,10 @@
 import { getPool, getPosition, getTick } from '../queries';
 import { SwyftRpcError } from '../types';
-import { SorobanRpc, xdr, scValToNative } from '@stellar/stellar-sdk';
+import { rpc, xdr, scValToNative } from '@stellar/stellar-sdk';
 
 jest.mock('@stellar/stellar-sdk', () => {
-  // Keep the shape minimal and aligned with packages/sdk/src/queries.ts imports.
-  // @stellar/stellar-sdk v13+ exports Soroban (not SorobanRpc) at the type level,
-  // so the previous test mock that references `actual.SorobanRpc` crashes.
   return {
-    SorobanRpc: {
+    rpc: {
       Server: jest.fn(),
       Api: {
         isSimulationError: jest.fn().mockReturnValue(false),
@@ -29,7 +26,7 @@ const mockCall = jest.fn().mockReturnValue({});
 beforeEach(() => {
   jest.clearAllMocks();
 
-  (SorobanRpc.Server as unknown as jest.Mock).mockImplementation(() => ({
+  (rpc.Server as unknown as jest.Mock).mockImplementation(() => ({
     simulateTransaction: mockSimulate,
   }));
 
@@ -65,7 +62,7 @@ describe('getPool', () => {
   });
 
   it('throws SwyftRpcError on simulation error', async () => {
-    (SorobanRpc.Api.isSimulationError as jest.Mock).mockReturnValueOnce(true);
+    (rpc.Api.isSimulationError as jest.Mock).mockReturnValueOnce(true);
     mockSimulate.mockResolvedValue({ error: 'contract trap' });
 
     await expect(
@@ -149,7 +146,7 @@ describe('getPosition', () => {
   });
 
   it('throws SwyftRpcError on simulation error', async () => {
-    (SorobanRpc.Api.isSimulationError as jest.Mock).mockReturnValueOnce(true);
+    (rpc.Api.isSimulationError as jest.Mock).mockReturnValueOnce(true);
     mockSimulate.mockResolvedValue({ error: 'contract trap' });
 
     await expect(

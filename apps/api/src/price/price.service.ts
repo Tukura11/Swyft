@@ -16,6 +16,7 @@ export interface PriceEvent {
   tick: number;
   liquidity: string;
   timestamp: number;
+  change24h?: string;
 }
 
 export interface SpotPriceResponse {
@@ -145,7 +146,7 @@ export class PriceService implements OnModuleInit, OnModuleDestroy {
     }
 
     const price = parseFloat(event.currentPrice);
-    const change = parseFloat(event.change24h);
+    const change = parseFloat(event.change24h ?? '0');
     const changePercent =
       price - change !== 0 ? (change / Math.abs(price - change)) * 100 : 0;
 
@@ -153,7 +154,7 @@ export class PriceService implements OnModuleInit, OnModuleDestroy {
       tokenA: tokenA.toLowerCase(),
       tokenB: tokenB.toLowerCase(),
       spotPrice: event.currentPrice,
-      change24hAbsolute: event.change24h,
+      change24hAbsolute: event.change24h ?? '0',
       change24hPercent: changePercent.toFixed(4),
       high24h: event.currentPrice,
       low24h: event.currentPrice,
@@ -185,35 +186,46 @@ export class PriceService implements OnModuleInit, OnModuleDestroy {
     // Mock implementation - in production this would query the PriceCandle table
     const candles: PriceCandle[] = [];
     const intervalSeconds = this.getIntervalSeconds(interval);
-    
+
     for (let i = 0; i < limit; i++) {
-      const timestamp = from + (i * intervalSeconds);
+      const timestamp = from + i * intervalSeconds;
       if (timestamp > to) break;
-      
+
       // Generate realistic-looking candle data
       const basePrice = 2000 + Math.random() * 100;
       const volatility = 0.02; // 2% volatility
-      
+
       candles.push({
         timestamp,
-        open: (basePrice + (Math.random() - 0.5) * basePrice * volatility).toFixed(2),
+        open: (
+          basePrice +
+          (Math.random() - 0.5) * basePrice * volatility
+        ).toFixed(2),
         high: (basePrice + Math.random() * basePrice * volatility).toFixed(2),
         low: (basePrice - Math.random() * basePrice * volatility).toFixed(2),
-        close: (basePrice + (Math.random() - 0.5) * basePrice * volatility).toFixed(2),
+        close: (
+          basePrice +
+          (Math.random() - 0.5) * basePrice * volatility
+        ).toFixed(2),
         volume: (Math.random() * 1000000).toFixed(2),
       });
     }
-    
+
     return candles;
   }
 
   private getIntervalSeconds(interval: string): number {
     switch (interval) {
-      case '1m': return 60;
-      case '5m': return 300;
-      case '1h': return 3600;
-      case '1d': return 86400;
-      default: return 3600;
+      case '1m':
+        return 60;
+      case '5m':
+        return 300;
+      case '1h':
+        return 3600;
+      case '1d':
+        return 86400;
+      default:
+        return 3600;
     }
   }
 

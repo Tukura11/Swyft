@@ -1,4 +1,13 @@
-import { Body, Controller, Delete, Get, Param, Post, Request, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  Post,
+  Request,
+  UseGuards,
+} from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { WebhooksService } from './webhooks.service';
@@ -34,9 +43,21 @@ export class WebhooksController {
   @ApiOperation({ summary: 'Register a webhook' })
   create(
     @Request() req: AuthRequest,
-    @Body() body: { url: string; eventTypes: WebhookEventType[]; secret?: string; largeSwapUsd?: number },
+    @Body()
+    body: {
+      url: string;
+      eventTypes: WebhookEventType[];
+      secret?: string;
+      largeSwapUsd?: number;
+    },
   ) {
-    return this.service.create(req.user.walletAddress, body.url, body.eventTypes, body.secret, body.largeSwapUsd);
+    return this.service.create(
+      req.user.walletAddress,
+      body.url,
+      body.eventTypes,
+      body.secret,
+      body.largeSwapUsd,
+    );
   }
 
   /**
@@ -46,7 +67,10 @@ export class WebhooksController {
    * @returns Array of webhook records (id, url, eventTypes, disabled, createdAt).
    */
   @Get()
-  @ApiOperation({ summary: 'List webhooks for the authenticated wallet — loading:true while fetching' })
+  @ApiOperation({
+    summary:
+      'List webhooks for the authenticated wallet — loading:true while fetching',
+  })
   async list(@Request() req: AuthRequest): Promise<WebhookListResponse> {
     const items = await this.service.list(req.user.walletAddress);
     return { loading: false, items };

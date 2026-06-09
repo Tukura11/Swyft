@@ -40,9 +40,15 @@ beforeEach(() => {
   jest.clearAllMocks();
   // Default: upsert returns the created record
   mockUpsert
-    .mockResolvedValueOnce({ symbol: 'USDC', address: 'GA5ZSEJYB37JRC5AVCIA5MOP4RHTM335X2KGX3IHOJAPP5RE34K4KZVN' }) // token0
-    .mockResolvedValueOnce({ symbol: 'XLM',  address: 'GBDEVU63Y6NTHJQQZIKVTC23NWLQVP3WJ2RI2OTSJTNYOIGICST6DUXR' }) // token1
-    .mockResolvedValueOnce({ id: 'test-pool-1' })     // pool
+    .mockResolvedValueOnce({
+      symbol: 'USDC',
+      address: 'GA5ZSEJYB37JRC5AVCIA5MOP4RHTM335X2KGX3IHOJAPP5RE34K4KZVN',
+    }) // token0
+    .mockResolvedValueOnce({
+      symbol: 'XLM',
+      address: 'GBDEVU63Y6NTHJQQZIKVTC23NWLQVP3WJ2RI2OTSJTNYOIGICST6DUXR',
+    }) // token1
+    .mockResolvedValueOnce({ id: 'test-pool-1' }) // pool
     .mockResolvedValueOnce({ id: 'test-position-1' }); // position
   mockCreateMany.mockResolvedValue({ count: 2 });
 });
@@ -76,7 +82,9 @@ describe('prisma seed', () => {
     await runSeed();
     expect(mockUpsert).toHaveBeenCalledWith(
       expect.objectContaining({
-        where: { address: 'GA5ZSEJYB37JRC5AVCIA5MOP4RHTM335X2KGX3IHOJAPP5RE34K4KZVN' },
+        where: {
+          address: 'GA5ZSEJYB37JRC5AVCIA5MOP4RHTM335X2KGX3IHOJAPP5RE34K4KZVN',
+        },
         create: expect.objectContaining({ symbol: 'USDC', decimals: 6 }),
       }),
     );
@@ -86,7 +94,9 @@ describe('prisma seed', () => {
     await runSeed();
     expect(mockUpsert).toHaveBeenCalledWith(
       expect.objectContaining({
-        where: { address: 'GBDEVU63Y6NTHJQQZIKVTC23NWLQVP3WJ2RI2OTSJTNYOIGICST6DUXR' },
+        where: {
+          address: 'GBDEVU63Y6NTHJQQZIKVTC23NWLQVP3WJ2RI2OTSJTNYOIGICST6DUXR',
+        },
         create: expect.objectContaining({ symbol: 'XLM', decimals: 7 }),
       }),
     );

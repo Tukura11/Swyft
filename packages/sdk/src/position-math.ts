@@ -73,22 +73,23 @@ export function getAmountsForLiquidity({
 }: AmountsForLiquidityParams): AmountsResult {
   if (liquidity === 0n) return { amount0: 0n, amount1: 0n };
 
-  const sqrtCurrent =
-    sqrtPriceX96 < sqrtPriceLowerX96
-      ? sqrtPriceLowerX96
-      : sqrtPriceX96 > sqrtPriceUpperX96
-      ? sqrtPriceUpperX96
-      : sqrtPriceX96;
-
-  // amount0 = L * Q96 / sqrtLower - L * Q96 / sqrtUpper
-  const amount0 =
-    (liquidity * Q96) / sqrtPriceLowerX96 -
-    (liquidity * Q96) / sqrtPriceUpperX96;
-
-  // amount1 = L * (sqrtCurrent - sqrtLower) / Q96
-  const amount1 = (liquidity * (sqrtCurrent - sqrtPriceLowerX96)) / Q96;
-
-  return { amount0, amount1 };
+  if (sqrtPriceX96 <= sqrtPriceLowerX96) {
+    // Price is below range: only amount0
+    const amount0 =
+      (liquidity * Q96) / sqrtPriceLowerX96 -
+      (liquidity * Q96) / sqrtPriceUpperX96;
+    return { amount0, amount1: 0n };
+  } else if (sqrtPriceX96 >= sqrtPriceUpperX96) {
+    // Price is above range: only amount1
+    const amount1 = (liquidity * (sqrtPriceUpperX96 - sqrtPriceLowerX96)) / Q96;
+    return { amount0: 0n, amount1 };
+  } else {
+    // Price is in range: both amounts
+    const amount0 = (liquidity * Q96) / sqrtPriceLowerX96 -
+      (liquidity * Q96) / sqrtPriceX96;
+    const amount1 = (liquidity * (sqrtPriceX96 - sqrtPriceLowerX96)) / Q96;
+    return { amount0, amount1 };
+  }
 }
 
 export interface LiquidityForAmountsParams {

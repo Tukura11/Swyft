@@ -53,12 +53,15 @@ export class PositionsService {
       limit: query.limit ?? 20,
     };
 
-    const { items, total } = await this.positionsRepository.listPositionsByWallet(
-      walletAddress,
-      normalized,
-    );
+    const { items, total } =
+      await this.positionsRepository.listPositionsByWallet(
+        walletAddress,
+        normalized,
+      );
 
-    const mapped = await Promise.all(items.map((position) => this.toResponse(position)));
+    const mapped = await Promise.all(
+      items.map((position) => this.toResponse(position)),
+    );
 
     return {
       items: mapped,
@@ -69,7 +72,9 @@ export class PositionsService {
     };
   }
 
-  private async toResponse(position: PositionSnapshot): Promise<PositionResponse> {
+  private async toResponse(
+    position: PositionSnapshot,
+  ): Promise<PositionResponse> {
     const livePrice = await this.priceService.getSpotPrice(position.poolId);
     const currentPrice = livePrice
       ? Number.parseFloat(livePrice.currentPrice)
@@ -77,7 +82,11 @@ export class PositionsService {
 
     const rangeStatus =
       position.status === 'active'
-        ? this.getRangeStatus(currentPrice, position.lowerTick, position.upperTick)
+        ? this.getRangeStatus(
+            currentPrice,
+            position.lowerTick,
+            position.upperTick,
+          )
         : null;
 
     return {

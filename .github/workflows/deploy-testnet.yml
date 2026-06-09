@@ -27,7 +27,7 @@ jobs:
 
       - name: Install stellar-cli
         run: |
-          cargo install --locked stellar-cli --features opt
+          cargo install --locked stellar-cli
 
       - name: Install pnpm
         uses: pnpm/action-setup@v3

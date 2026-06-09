@@ -2,14 +2,22 @@
 export { CommonModule } from './common.module';
 
 // Interfaces
-export type { ErrorResponse, ValidationErrorResponse, ValidationFieldError } from './interfaces/error-response.interface';
+export type {
+  ErrorResponse,
+  ValidationErrorResponse,
+  ValidationFieldError,
+} from './error-response.interface';
 
 // Filter
-export { AllExceptionsFilter } from './filters/all-exceptions.filter';
+export { AllExceptionsFilter } from './all-exceptions.filter';
 
 // DTOs
-export { PaginationQueryDto, PaginatedResponseDto, SortOrder } from './dto/pagination.dto';
-export { UuidParamDto } from './dto/uuid-param.dto';
+export {
+  PaginationQueryDto,
+  PaginatedResponseDto,
+  SortOrder,
+} from './pagination.dto';
+export { UuidParamDto } from './uuid-param.dto';
 
 // Exceptions
 export {
@@ -20,4 +28,4 @@ export {
   ResourceNotFoundException,
   DuplicateResourceException,
   BusinessRuleViolationException,
-} from './exceptions/http.exceptions';
+} from './http.exceptions';

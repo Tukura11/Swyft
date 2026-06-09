@@ -1,6 +1,7 @@
 import { Module, NestModule, MiddlewareConsumer } from '@nestjs/common';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
+import { AuthModule } from './auth/auth.module';
 import { CacheModule } from './cache/cache.module';
 import { PriceModule } from './price/price.module';
 import { HorizonModule } from './horizon/horizon.module';
@@ -15,6 +16,7 @@ import { LoggingMiddleware } from './logging/logging.middleware';
 import { ApiKeysModule } from './api-keys/api-keys.module';
 import { WebhooksModule } from './webhooks/webhooks.module';
 import { CandlesModule } from './candles/candles.module';
+import { RateLimitModule } from './rate-limit/rate-limit.module';
 
 @Module({
   imports: [
@@ -22,6 +24,7 @@ import { CandlesModule } from './candles/candles.module';
     PrismaModule,
     MetricsModule,
     RateLimitModule,
+    AuthModule,
     PriceModule,
     PoolsModule,
     PositionsModule,

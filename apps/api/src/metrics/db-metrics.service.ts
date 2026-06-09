@@ -13,7 +13,9 @@ export interface DbMetricsSnapshot {
 export class DbMetricsService {
   private durations: number[] = [];
   private slowCount = 0;
-  private readonly slowThreshold = Number(process.env.DB_SLOW_QUERY_THRESHOLD_MS ?? 100);
+  private readonly slowThreshold = Number(
+    process.env.DB_SLOW_QUERY_THRESHOLD_MS ?? 100,
+  );
 
   constructor(private readonly cache: CacheService) {}
 
@@ -34,7 +36,9 @@ export class DbMetricsService {
     // Cache hit rate: read from Redis key written by CacheService (best-effort)
     let cacheHitRate: number | null = null;
     try {
-      const stats = await this.cache.get<{ hits: number; misses: number }>('metrics:cache:stats');
+      const stats = await this.cache.get<{ hits: number; misses: number }>(
+        'metrics:cache:stats',
+      );
       if (stats && stats.hits + stats.misses > 0) {
         cacheHitRate = stats.hits / (stats.hits + stats.misses);
       }

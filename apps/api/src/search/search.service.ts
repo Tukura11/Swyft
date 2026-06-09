@@ -42,23 +42,28 @@ export class SearchService {
   }
 
   private searchTokens(query: string): Promise<SearchTokenResult[]> {
-    return this.prisma.$queryRawUnsafe<SearchTokenResult[]>(
+    return (
+      this.prisma.$queryRawUnsafe as (
+        sql: string,
+        ...values: unknown[]
+      ) => Promise<SearchTokenResult[]>
+    )(
       `
         SELECT
-          "contractAddress",
+          "address" AS "contractAddress",
           "symbol",
           "name",
           "decimals",
           "logoUri"
         FROM "token"
         WHERE
-          lower("contractAddress") = lower($1)
+          lower("address") = lower($1)
           OR "symbol" ILIKE $2
           OR "name" ILIKE $3
         ORDER BY
           CASE
             WHEN lower("symbol") = lower($1) THEN 0
-            WHEN lower("contractAddress") = lower($1) THEN 0
+            WHEN lower("address") = lower($1) THEN 0
             WHEN "symbol" ILIKE $2 THEN 1
             WHEN "name" ILIKE $3 THEN 2
             ELSE 3
@@ -74,7 +79,12 @@ export class SearchService {
   }
 
   private searchPools(query: string): Promise<SearchPoolResult[]> {
-    return this.prisma.$queryRawUnsafe<SearchPoolResult[]>(
+    return (
+      this.prisma.$queryRawUnsafe as (
+        sql: string,
+        ...values: unknown[]
+      ) => Promise<SearchPoolResult[]>
+    )(
       `
         SELECT
           p."poolId",

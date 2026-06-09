@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { NotFoundException } from '@nestjs/common';
 import { PriceController } from './price.controller';
 import { PriceService, SpotPriceResponse } from './price.service';
+import { CacheService } from '../cache/cache.service';
 
 const mockResponse: SpotPriceResponse = {
   tokenA: 'usdc',
@@ -20,10 +21,18 @@ describe('PriceController', () => {
 
   beforeEach(async () => {
     priceService = { getTokenPairPrice: jest.fn() };
+    const cacheService = {
+      get: jest.fn(),
+      set: jest.fn(),
+      invalidate: jest.fn(),
+    };
 
     const module: TestingModule = await Test.createTestingModule({
       controllers: [PriceController],
-      providers: [{ provide: PriceService, useValue: priceService }],
+      providers: [
+        { provide: PriceService, useValue: priceService },
+        { provide: CacheService, useValue: cacheService },
+      ],
     }).compile();
 
     controller = module.get<PriceController>(PriceController);

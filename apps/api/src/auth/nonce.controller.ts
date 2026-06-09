@@ -40,6 +40,9 @@ export class NonceController {
     // Store nonce for 2 minutes (120 seconds)
     await this.redis.set(key, nonce, 'EX', 120);
 
-    return { nonce, message: 'Sign this nonce with your wallet and POST to /auth/verify' };
+    return {
+      nonce,
+      message: 'Sign this nonce with your wallet and POST to /auth/verify',
+    };
   }
 }

@@ -24,7 +24,9 @@ export class JwtAuthGuard implements CanActivate {
     const req = context.switchToHttp().getRequest<RequestWithUser>();
     const authHeader = req.headers.authorization;
     if (!authHeader?.startsWith('Bearer ')) {
-      throw new UnauthorizedException('Missing or invalid Authorization header');
+      throw new UnauthorizedException(
+        'Missing or invalid Authorization header',
+      );
     }
 
     const token = authHeader.slice('Bearer '.length).trim();
@@ -40,7 +42,10 @@ export class JwtAuthGuard implements CanActivate {
     try {
       const payload = verify(token, secret) as JwtPayload;
       const walletAddress =
-        payload.walletAddress ?? payload.wallet ?? payload.address ?? payload.sub;
+        payload.walletAddress ??
+        payload.wallet ??
+        payload.address ??
+        payload.sub;
 
       if (!walletAddress || typeof walletAddress !== 'string') {
         throw new UnauthorizedException('JWT is missing wallet address claim');

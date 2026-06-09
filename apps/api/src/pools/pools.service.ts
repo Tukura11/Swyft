@@ -117,7 +117,9 @@ export class PoolsService {
     ].join(':');
   }
 
-  private toResponsePool(pool: PoolSnapshot): PoolsListResponse['items'][number] {
+  private toResponsePool(
+    pool: PoolSnapshot,
+  ): PoolsListResponse['items'][number] {
     return {
       id: pool.id,
       token0: pool.token0,
@@ -147,7 +149,11 @@ export class PoolsService {
     const cached = await this.cache.get<TickData[]>(cacheKey);
     if (cached) return cached;
 
-    const ticks = await this.poolsRepository.getTicksByPoolId(poolId, lowerTick, upperTick);
+    const ticks = await this.poolsRepository.getTicksByPoolId(
+      poolId,
+      lowerTick,
+      upperTick,
+    );
     await this.cache.set(cacheKey, ticks, TTL.TICKS);
     return ticks;
   }

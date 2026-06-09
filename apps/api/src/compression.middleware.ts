@@ -1,6 +1,10 @@
 import { Injectable, NestMiddleware } from '@nestjs/common';
 import { Request, Response, NextFunction } from 'express';
-import { createGzip, createBrotliCompress, constants as zlibConstants } from 'zlib';
+import {
+  createGzip,
+  createBrotliCompress,
+  constants as zlibConstants,
+} from 'zlib';
 
 const MIN_SIZE = 1024; // 1 KB
 const LEVEL = Number(process.env.COMPRESSION_LEVEL ?? 6);
@@ -25,12 +29,17 @@ export class CompressionMiddleware implements NestMiddleware {
 
     // Buffer the response body
     res.write = (chunk: unknown, ...args: unknown[]) => {
-      chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk as string));
+      chunks.push(
+        Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk as string),
+      );
       return true;
     };
 
     res.end = (chunk?: unknown, ...args: unknown[]) => {
-      if (chunk) chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk as string));
+      if (chunk)
+        chunks.push(
+          Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk as string),
+        );
       const body = Buffer.concat(chunks);
 
       if (body.length < MIN_SIZE) {

@@ -3,9 +3,17 @@ import { Request, Response, NextFunction } from 'express';
 import { randomUUID } from 'crypto';
 
 const SENSITIVE_HEADERS = new Set(['authorization', 'cookie', 'set-cookie']);
-const SENSITIVE_BODY_KEYS = new Set(['password', 'token', 'secret', 'accessToken', 'refreshToken']);
+const SENSITIVE_BODY_KEYS = new Set([
+  'password',
+  'token',
+  'secret',
+  'accessToken',
+  'refreshToken',
+]);
 
-function redactHeaders(headers: Record<string, unknown>): Record<string, unknown> {
+function redactHeaders(
+  headers: Record<string, unknown>,
+): Record<string, unknown> {
   const out: Record<string, unknown> = {};
   for (const [k, v] of Object.entries(headers)) {
     out[k] = SENSITIVE_HEADERS.has(k.toLowerCase()) ? '[REDACTED]' : v;
@@ -47,19 +55,26 @@ export class LoggingMiddleware implements NestMiddleware {
           query: req.query,
           ip: req.ip,
           userAgent: req.get('user-agent'),
-          headers: redactHeaders(req.headers as Record<string, unknown>),
+          headers: redactHeaders(req.headers),
           body: redactBody(req.body),
         }),
       );
     } else {
-      this.logger.log(`→ ${req.method} ${req.path} requestId=${requestId} ip=${req.ip}`);
+      this.logger.log(
+        `→ ${req.method} ${req.path} requestId=${requestId} ip=${req.ip}`,
+      );
     }
 
     res.on('finish', () => {
       const elapsed = Date.now() - start;
       if (isProd) {
         this.logger.log(
-          JSON.stringify({ event: 'response', requestId, status: res.statusCode, elapsed }),
+          JSON.stringify({
+            event: 'response',
+            requestId,
+            status: res.statusCode,
+            elapsed,
+          }),
         );
       } else {
         this.logger.log(

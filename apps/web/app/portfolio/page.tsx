@@ -6,7 +6,7 @@ import { useEffect } from "react";
 import { useWalletContext } from "@/context/WalletContext";
 import { usePortfolio } from "@/hooks/usePortfolio";
 import { PositionCard } from "@/components/PositionCard";
-import { API_BASE, SWYFT_NETWORK } from "@/lib/constants";
+import { API_BASE, SWYFT_NETWORK_PASSPHRASE } from "@/lib/constants";
 import { signTransaction } from "@stellar/freighter-api";
 import { buildCollectTx } from "@swyft/sdk";
 import Link from "next/link";
@@ -44,7 +44,7 @@ export default function PortfolioPage() {
         ownerAddress: position.ownerWallet,
       });
 
-      const signResult = await signTransaction(xdr, { network: SWYFT_NETWORK });
+      const signResult = await signTransaction(xdr, { networkPassphrase: SWYFT_NETWORK_PASSPHRASE });
       const signedXdr =
         typeof signResult === "string"
           ? signResult

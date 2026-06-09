@@ -36,11 +36,16 @@ export class AllExceptionsFilter implements ExceptionFilter {
       const exceptionResponse = exception.getResponse();
 
       // class-validator fires a 400 with an array of messages
-      if (statusCode === HttpStatus.BAD_REQUEST && typeof exceptionResponse === 'object') {
+      if (
+        statusCode === HttpStatus.BAD_REQUEST &&
+        typeof exceptionResponse === 'object'
+      ) {
         const raw = exceptionResponse as Record<string, unknown>;
 
         if (Array.isArray(raw['message'])) {
-          const validationErrors = this.parseValidationMessages(raw['message'] as string[]);
+          const validationErrors = this.parseValidationMessages(
+            raw['message'] as string[],
+          );
 
           const body: ValidationErrorResponse = {
             statusCode,
@@ -51,9 +56,12 @@ export class AllExceptionsFilter implements ExceptionFilter {
             validationErrors,
           };
 
-          this.logger.warn(`[400] Validation error at ${request.method} ${path}`, {
-            validationErrors,
-          });
+          this.logger.warn(
+            `[400] Validation error at ${request.method} ${path}`,
+            {
+              validationErrors,
+            },
+          );
 
           httpAdapter.reply(ctx.getResponse(), body, statusCode);
           return;
@@ -63,13 +71,15 @@ export class AllExceptionsFilter implements ExceptionFilter {
       const message =
         typeof exceptionResponse === 'string'
           ? exceptionResponse
-          : ((exceptionResponse as Record<string, unknown>)['message'] as string) ??
-            exception.message;
+          : (((exceptionResponse as Record<string, unknown>)[
+              'message'
+            ] as string) ?? exception.message);
 
       const error =
         typeof exceptionResponse === 'object'
-          ? ((exceptionResponse as Record<string, unknown>)['error'] as string) ??
-            this.statusToError(statusCode)
+          ? (((exceptionResponse as Record<string, unknown>)[
+              'error'
+            ] as string) ?? this.statusToError(statusCode))
           : this.statusToError(statusCode);
 
       const body: ErrorResponse = {
@@ -86,7 +96,9 @@ export class AllExceptionsFilter implements ExceptionFilter {
           exception instanceof Error ? exception.stack : undefined,
         );
       } else {
-        this.logger.warn(`[${statusCode}] ${request.method} ${path} — ${message}`);
+        this.logger.warn(
+          `[${statusCode}] ${request.method} ${path} — ${message}`,
+        );
       }
 
       httpAdapter.reply(ctx.getResponse(), body, statusCode);
@@ -105,7 +117,9 @@ export class AllExceptionsFilter implements ExceptionFilter {
 
     const body: ErrorResponse = {
       statusCode,
-      message: isProd ? 'An unexpected error occurred' : this.safeMessage(exception),
+      message: isProd
+        ? 'An unexpected error occurred'
+        : this.safeMessage(exception),
       error: 'Internal Server Error',
       timestamp,
       path,

@@ -9,7 +9,9 @@ export class ApiKeysService {
   async create(ownerWallet: string, label: string) {
     const raw = randomBytes(32).toString('hex');
     const hashed = createHash('sha256').update(raw).digest('hex');
-    await this.prisma.apiKey.create({ data: { hashedKey: hashed, label, ownerWallet } });
+    await this.prisma.apiKey.create({
+      data: { hashedKey: hashed, label, ownerWallet },
+    });
     return { key: raw, label };
   }
 
@@ -21,6 +23,9 @@ export class ApiKeysService {
   }
 
   async revoke(id: string, ownerWallet: string) {
-    await this.prisma.apiKey.updateMany({ where: { id, ownerWallet }, data: { revoked: true } });
+    await this.prisma.apiKey.updateMany({
+      where: { id, ownerWallet },
+      data: { revoked: true },
+    });
   }
 }

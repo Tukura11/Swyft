@@ -19,13 +19,19 @@ export class InvalidInputException extends BadRequestException {
 
 export class MissingTokenException extends UnauthorizedException {
   constructor() {
-    super({ message: 'Authentication token is missing', error: 'Unauthorized' });
+    super({
+      message: 'Authentication token is missing',
+      error: 'Unauthorized',
+    });
   }
 }
 
 export class InvalidTokenException extends UnauthorizedException {
   constructor() {
-    super({ message: 'Authentication token is invalid or expired', error: 'Unauthorized' });
+    super({
+      message: 'Authentication token is invalid or expired',
+      error: 'Unauthorized',
+    });
   }
 }
 

@@ -26,7 +26,9 @@ async function bootstrap() {
   // Configure Swagger
   const config = new DocumentBuilder()
     .setTitle('Swyft API')
-    .setDescription('Concentrated liquidity DEX on Stellar - REST API documentation')
+    .setDescription(
+      'Concentrated liquidity DEX on Stellar - REST API documentation',
+    )
     .setVersion('1.0.0')
     .addBearerAuth()
     .build();

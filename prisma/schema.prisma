@@ -90,21 +90,6 @@ model Tick {
   @@map("tick")
 }
 
-model Tick {
-  id                   String   @id @default(cuid())
-  poolId               String
-  tickIndex            Int
-  liquidityNet         String   // signed integer for net liquidity change
-  liquidityGross       String   // absolute liquidity
-  feeGrowthOutside0X128 String  // fee growth outside token0
-  feeGrowthOutside1X128 String  // fee growth outside token1
-  updatedAt            DateTime @updatedAt
-
-  @@unique([poolId, tickIndex])
-  @@index([poolId])
-  @@map("tick")
-}
-
 model Token {
   id                String   @id @default(cuid())
   address           String   @unique
@@ -171,8 +156,80 @@ model PriceCandle {
   close       Float
   volumeUsd   Float
   periodStart DateTime
+  pool        Pool     @relation(fields: [poolId], references: [id], onDelete: Cascade)
 
   @@unique([poolId, interval, periodStart])
   @@index([poolId, interval])
   @@map("price_candle")
+}
+
+model PoolCreated {
+  eventId      String   @id
+  poolId       String
+  tokenA       String
+  tokenB       String
+  fee          String
+  sqrtPriceX96 String
+  createdAt    DateTime @default(now())
+
+  @@index([poolId])
+  @@map("pool_created")
+}
+
+model SwapProcessed {
+  eventId      String   @id
+  poolId       String
+  sender       String
+  recipient    String
+  amount0      String
+  amount1      String
+  sqrtPriceX96 String
+  liquidity    String
+  tick         Int
+  createdAt    DateTime @default(now())
+
+  @@index([poolId, createdAt])
+  @@map("swap_processed")
+}
+
+model PositionMinted {
+  eventId    String   @id
+  poolId     String
+  owner      String
+  tickLower  Int
+  tickUpper  Int
+  liquidity  String
+  amount0    String
+  amount1    String
+  createdAt  DateTime @default(now())
+
+  @@index([poolId])
+  @@map("position_minted")
+}
+
+model PositionBurned {
+  eventId    String   @id
+  poolId     String
+  owner      String
+  tickLower  Int
+  tickUpper  Int
+  liquidity  String
+  amount0    String
+  amount1    String
+  createdAt  DateTime @default(now())
+
+  @@index([poolId])
+  @@map("position_burned")
+}
+
+model FeesCollected {
+  eventId   String   @id
+  poolId    String
+  recipient String
+  amount0   String
+  amount1   String
+  createdAt DateTime @default(now())
+
+  @@index([poolId])
+  @@map("fees_collected")
 }

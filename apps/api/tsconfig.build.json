@@ -1,4 +1,12 @@
 {
   "extends": "./tsconfig.json",
-  "exclude": ["node_modules", "test", "dist", "**/*spec.ts"]
+  "exclude": [
+    "node_modules",
+    "test",
+    "dist",
+    "**/*spec.ts",
+    "src/pools-unit-test/**",
+    "src/request-validation/EXAMPLE_USAGE.ts",
+    "src/request-validation/main.ts"
+  ]
 }

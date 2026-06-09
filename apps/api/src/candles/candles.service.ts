@@ -39,7 +39,10 @@ export class CandlesService {
     let written = 0;
     for (const [poolId, poolSwaps] of byPool) {
       const prices = poolSwaps.map((s) => Number(s.sqrtPriceX96));
-      const volumeUsd = poolSwaps.reduce((sum, s) => sum + Math.abs(Number(s.amount0)), 0);
+      const volumeUsd = poolSwaps.reduce(
+        (sum, s) => sum + Math.abs(Number(s.amount0)),
+        0,
+      );
 
       const candle = {
         poolId,
@@ -53,13 +56,17 @@ export class CandlesService {
       };
 
       await this.prisma.priceCandle.upsert({
-        where: { poolId_interval_periodStart: { poolId, interval, periodStart } },
+        where: {
+          poolId_interval_periodStart: { poolId, interval, periodStart },
+        },
         create: candle,
         update: candle,
       });
       written++;
     }
 
-    this.logger.log(`[${interval}] Wrote ${written} candles for period ${periodStart.toISOString()}`);
+    this.logger.log(
+      `[${interval}] Wrote ${written} candles for period ${periodStart.toISOString()}`,
+    );
   }
 }

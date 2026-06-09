@@ -145,9 +145,10 @@ export class AuthService {
     const payload: JwtPayload = { sub: walletAddress, walletAddress };
 
     // expiresIn is read from JWT_EXPIRES_IN env; falls back to '15m' if unset.
-    const expiresIn =
-      this.configService.get<string>('JWT_EXPIRES_IN') ?? '15m';
+    const expiresIn = this.configService.get<string>('JWT_EXPIRES_IN') ?? '15m';
 
-    return this.jwtService.sign(payload, { expiresIn });
+    return this.jwtService.sign(payload, {
+      expiresIn: expiresIn as `${number}m`,
+    });
   }
 }

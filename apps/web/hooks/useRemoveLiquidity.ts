@@ -4,7 +4,7 @@ import { useState } from "react";
 import { signTransaction } from "@stellar/freighter-api";
 import { buildBurnTx, buildCollectTx } from "@swyft/sdk";
 import type { PositionSnapshot } from "@swyft/ui";
-import { API_BASE, SWYFT_NETWORK } from "@/lib/constants";
+import { API_BASE, SWYFT_NETWORK_PASSPHRASE } from "@/lib/constants";
 
 /** Lifecycle status of a remove-liquidity or collect-fees transaction. */
 export type TxStatus = "idle" | "signing" | "submitting" | "success" | "error";
@@ -78,7 +78,7 @@ export function useRemoveLiquidity(position: PositionSnapshot | null, authToken:
         ownerAddress: position.ownerWallet,
       });
 
-      const signResult = await signTransaction(xdr, { network: SWYFT_NETWORK });
+      const signResult = await signTransaction(xdr, { networkPassphrase: SWYFT_NETWORK_PASSPHRASE });
       const signedXdr = resolveSignedXdr(signResult);
 
       if (!signedXdr) { setState({ status: "error", txError: "rejected", txHash: null }); return; }
@@ -108,7 +108,7 @@ export function useRemoveLiquidity(position: PositionSnapshot | null, authToken:
         ownerAddress: position.ownerWallet,
       });
 
-      const signResult = await signTransaction(xdr, { network: SWYFT_NETWORK });
+      const signResult = await signTransaction(xdr, { networkPassphrase: SWYFT_NETWORK_PASSPHRASE });
       const signedXdr = resolveSignedXdr(signResult);
 
       if (!signedXdr) { setState({ status: "error", txError: "rejected", txHash: null }); return; }

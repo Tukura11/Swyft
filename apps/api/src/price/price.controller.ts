@@ -6,7 +6,13 @@ import {
   Param,
   Query,
 } from '@nestjs/common';
-import { ApiOperation, ApiParam, ApiQuery, ApiResponse, ApiTags } from '@nestjs/swagger';
+import {
+  ApiOperation,
+  ApiParam,
+  ApiQuery,
+  ApiResponse,
+  ApiTags,
+} from '@nestjs/swagger';
 import { PriceService, SpotPriceResponse } from './price.service';
 import { CacheService, TTL } from '../cache/cache.service';
 import { PriceCandleDto } from './dto/price-candle.dto';
@@ -27,8 +33,14 @@ export class PriceController {
   @ApiOperation({ summary: 'Get the current spot price for a token pair' })
   @ApiParam({ name: 'tokenA', description: 'First token address or symbol' })
   @ApiParam({ name: 'tokenB', description: 'Second token address or symbol' })
-  @ApiResponse({ status: 200, description: 'Spot price retrieved successfully' })
-  @ApiResponse({ status: 404, description: 'No price data found for token pair' })
+  @ApiResponse({
+    status: 200,
+    description: 'Spot price retrieved successfully',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'No price data found for token pair',
+  })
   getPrice(
     @Param('tokenA') tokenA: string,
     @Param('tokenB') tokenB: string,
@@ -47,12 +59,35 @@ export class PriceController {
     description: 'Candle interval',
     example: '1h',
   })
-  @ApiQuery({ name: 'from', required: false, type: Number, description: 'Start timestamp (unix seconds)' })
-  @ApiQuery({ name: 'to', required: false, type: Number, description: 'End timestamp (unix seconds)' })
-  @ApiQuery({ name: 'limit', required: false, type: Number, description: 'Maximum number of candles (max 500)', example: 168 })
-  @ApiResponse({ status: 200, type: [PriceCandleDto], description: 'Candlestick data retrieved successfully' })
+  @ApiQuery({
+    name: 'from',
+    required: false,
+    type: Number,
+    description: 'Start timestamp (unix seconds)',
+  })
+  @ApiQuery({
+    name: 'to',
+    required: false,
+    type: Number,
+    description: 'End timestamp (unix seconds)',
+  })
+  @ApiQuery({
+    name: 'limit',
+    required: false,
+    type: Number,
+    description: 'Maximum number of candles (max 500)',
+    example: 168,
+  })
+  @ApiResponse({
+    status: 200,
+    type: [PriceCandleDto],
+    description: 'Candlestick data retrieved successfully',
+  })
   @ApiResponse({ status: 400, description: 'Invalid parameters' })
-  @ApiResponse({ status: 404, description: 'No price data found for token pair' })
+  @ApiResponse({
+    status: 404,
+    description: 'No price data found for token pair',
+  })
   async getCandles(
     @Param('tokenA') tokenA: string,
     @Param('tokenB') tokenB: string,
@@ -79,11 +114,15 @@ export class PriceController {
       : parsedTo - this.getDefaultIntervalSeconds(interval) * parsedLimit;
 
     if (isNaN(parsedFrom) || isNaN(parsedTo)) {
-      throw new BadRequestException('from and to must be valid unix timestamps');
+      throw new BadRequestException(
+        'from and to must be valid unix timestamps',
+      );
     }
 
     if (parsedFrom >= parsedTo) {
-      throw new BadRequestException('from timestamp must be before to timestamp');
+      throw new BadRequestException(
+        'from timestamp must be before to timestamp',
+      );
     }
 
     const cacheKey = `candles:${tokenA}:${tokenB}:${interval}:${parsedFrom}:${parsedTo}:${parsedLimit}`;
@@ -103,11 +142,15 @@ export class PriceController {
     );
 
     if (candles.length === 0) {
-      throw new NotFoundException(`No price data found for token pair ${tokenA}/${tokenB}`);
+      throw new NotFoundException(
+        `No price data found for token pair ${tokenA}/${tokenB}`,
+      );
     }
 
     const ttl =
-      interval === '1m' || interval === '5m' ? TTL.CANDLES_FAST : TTL.CANDLES_SLOW;
+      interval === '1m' || interval === '5m'
+        ? TTL.CANDLES_FAST
+        : TTL.CANDLES_SLOW;
     await this.cacheService.set(cacheKey, candles, ttl);
 
     return candles;

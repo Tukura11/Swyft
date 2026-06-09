@@ -5,7 +5,7 @@ import { signTransaction } from "@stellar/freighter-api";
 import { buildSwapTx, toRawAmount, toStellarAddress } from "@swyft/sdk";
 import type { SwapQuote } from "@swyft/sdk";
 import type { Token } from "@swyft/ui";
-import { API_BASE, SWYFT_NETWORK } from "@/lib/constants";
+import { API_BASE, SWYFT_NETWORK_PASSPHRASE } from "@/lib/constants";
 
 export type SwapStatus = "idle" | "signing" | "submitting" | "success" | "error";
 export type SwapError = "rejected" | "slippage" | "network" | null;
@@ -51,7 +51,7 @@ export function useSwapExecution() {
         ownerAddress: toStellarAddress(walletAddress),
       });
 
-      const signResult = await signTransaction(xdr, { network: SWYFT_NETWORK });
+      const signResult = await signTransaction(xdr, { networkPassphrase: SWYFT_NETWORK_PASSPHRASE });
       const signedXdr =
         typeof signResult === "string"
           ? signResult

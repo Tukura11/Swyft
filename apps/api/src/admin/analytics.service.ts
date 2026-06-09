@@ -64,17 +64,26 @@ export class AnalyticsService {
     const h24 = new Date(now.getTime() - 24 * 60 * 60 * 1000);
     const d7 = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
 
-    const [swapCount, swaps24h, swaps7d, uniqueWallets, feesRows, tvlRows] = await Promise.all([
-      this.prisma.swapProcessed.count(),
-      this.prisma.swapProcessed.findMany({ where: { createdAt: { gte: h24 } } }),
-      this.prisma.swapProcessed.findMany({ where: { createdAt: { gte: d7 } } }),
-      this.prisma.swapProcessed.groupBy({ by: ['sender'], _count: true }),
-      this.prisma.feesCollected.findMany(),
-      this.prisma.positionMinted.findMany(),
-    ]);
+    const [swapCount, swaps24h, swaps7d, uniqueWallets, feesRows, tvlRows] =
+      await Promise.all([
+        this.prisma.swapProcessed.count(),
+        this.prisma.swapProcessed.findMany({
+          where: { createdAt: { gte: h24 } },
+        }),
+        this.prisma.swapProcessed.findMany({
+          where: { createdAt: { gte: d7 } },
+        }),
+        this.prisma.swapProcessed.groupBy({ by: ['sender'], _count: true }),
+        this.prisma.feesCollected.findMany(),
+        this.prisma.positionMinted.findMany(),
+      ]);
 
     const sumAmounts = (rows: { amount0: string; amount1: string }[]) =>
-      rows.reduce((acc, r) => acc + Math.abs(Number(r.amount0)) + Math.abs(Number(r.amount1)), 0);
+      rows.reduce(
+        (acc, r) =>
+          acc + Math.abs(Number(r.amount0)) + Math.abs(Number(r.amount1)),
+        0,
+      );
 
     const result = {
       totalTvl: sumAmounts(tvlRows),
@@ -93,8 +102,12 @@ export class AnalyticsService {
     const buckets = this.buildBuckets(interval);
     const since = buckets[0].start;
 
-    const mints = await this.prisma.positionMinted.findMany({ where: { createdAt: { gte: since } } });
-    const burns = await this.prisma.positionBurned.findMany({ where: { createdAt: { gte: since } } });
+    const mints = await this.prisma.positionMinted.findMany({
+      where: { createdAt: { gte: since } },
+    });
+    const burns = await this.prisma.positionBurned.findMany({
+      where: { createdAt: { gte: since } },
+    });
 
     const series = buckets.map(({ start, end, label }) => {
       const mintedInBucket = mints
@@ -115,12 +128,18 @@ export class AnalyticsService {
     const buckets = this.buildBuckets(interval);
     const since = buckets[0].start;
 
-    const swaps = await this.prisma.swapProcessed.findMany({ where: { createdAt: { gte: since } } });
+    const swaps = await this.prisma.swapProcessed.findMany({
+      where: { createdAt: { gte: since } },
+    });
 
     const series = buckets.map(({ start, end, label }) => {
       const volume = swaps
         .filter((s) => s.createdAt >= start && s.createdAt < end)
-        .reduce((acc, s) => acc + Math.abs(Number(s.amount0)) + Math.abs(Number(s.amount1)), 0);
+        .reduce(
+          (acc, s) =>
+            acc + Math.abs(Number(s.amount0)) + Math.abs(Number(s.amount1)),
+          0,
+        );
       return { timestamp: label, volume };
     });
 
@@ -130,15 +149,22 @@ export class AnalyticsService {
   }
 
   private async computeAndCacheFees() {
-    const rows = await this.prisma.feesCollected.groupBy({
-      by: ['poolId'],
-      _sum: { amount0: true, amount1: true },
+    const rows = await this.prisma.feesCollected.findMany({
+      select: { poolId: true, amount0: true, amount1: true },
     });
 
-    const byPool = rows.map((r) => ({
-      poolId: r.poolId,
-      feesAmount0: r._sum.amount0 ?? '0',
-      feesAmount1: r._sum.amount1 ?? '0',
+    const totals = new Map<string, { amount0: number; amount1: number }>();
+    for (const row of rows) {
+      const current = totals.get(row.poolId) ?? { amount0: 0, amount1: 0 };
+      current.amount0 += Math.abs(Number(row.amount0));
+      current.amount1 += Math.abs(Number(row.amount1));
+      totals.set(row.poolId, current);
+    }
+
+    const byPool = [...totals.entries()].map(([poolId, totalsForPool]) => ({
+      poolId,
+      feesAmount0: String(totalsForPool.amount0),
+      feesAmount1: String(totalsForPool.amount1),
     }));
 
     const result = { byPool };
@@ -148,11 +174,14 @@ export class AnalyticsService {
 
   private buildBuckets(interval: TimeInterval) {
     const now = new Date();
-    const bucketCount = interval === TimeInterval.ONE_DAY ? 24 : interval === TimeInterval.SEVEN_DAYS ? 7 : 30;
-    const bucketMs =
+    const bucketCount =
       interval === TimeInterval.ONE_DAY
-        ? 60 * 60 * 1000
-        : 24 * 60 * 60 * 1000;
+        ? 24
+        : interval === TimeInterval.SEVEN_DAYS
+          ? 7
+          : 30;
+    const bucketMs =
+      interval === TimeInterval.ONE_DAY ? 60 * 60 * 1000 : 24 * 60 * 60 * 1000;
 
     return Array.from({ length: bucketCount }, (_, i) => {
       const end = new Date(now.getTime() - (bucketCount - 1 - i) * bucketMs);

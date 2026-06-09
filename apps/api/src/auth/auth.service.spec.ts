@@ -117,10 +117,9 @@ describe('AuthService', () => {
 
       await service.verifyWallet({ walletAddress, nonce, signature });
 
-      expect(mockJwtService.sign).toHaveBeenCalledWith(
-        expect.any(Object),
-        { expiresIn: '30m' },
-      );
+      expect(mockJwtService.sign).toHaveBeenCalledWith(expect.any(Object), {
+        expiresIn: '30m',
+      });
     });
 
     it('falls back to 15m when JWT_EXPIRES_IN is not set', async () => {
@@ -134,10 +133,9 @@ describe('AuthService', () => {
 
       await service.verifyWallet({ walletAddress, nonce, signature });
 
-      expect(mockJwtService.sign).toHaveBeenCalledWith(
-        expect.any(Object),
-        { expiresIn: '15m' },
-      );
+      expect(mockJwtService.sign).toHaveBeenCalledWith(expect.any(Object), {
+        expiresIn: '15m',
+      });
     });
   });
 

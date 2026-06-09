@@ -1,12 +1,5 @@
 import { Transform, Type } from 'class-transformer';
-import {
-  IsEnum,
-  IsInt,
-  IsOptional,
-  IsString,
-  Max,
-  Min,
-} from 'class-validator';
+import { IsEnum, IsInt, IsOptional, IsString, Max, Min } from 'class-validator';
 
 export enum SortOrder {
   ASC = 'asc',
@@ -35,7 +28,9 @@ export class PaginationQueryDto {
   sortBy?: string;
 
   @IsOptional()
-  @IsEnum(SortOrder, { message: `sortOrder must be one of: ${Object.values(SortOrder).join(', ')}` })
+  @IsEnum(SortOrder, {
+    message: `sortOrder must be one of: ${Object.values(SortOrder).join(', ')}`,
+  })
   sortOrder?: SortOrder = SortOrder.DESC;
 }
 

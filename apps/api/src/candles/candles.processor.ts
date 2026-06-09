@@ -1,9 +1,16 @@
-import { Injectable, Logger, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  OnModuleDestroy,
+  OnModuleInit,
+} from '@nestjs/common';
 import { Queue, Worker, Job, ConnectionOptions } from 'bullmq';
 import { CandlesService, CandleInterval } from './candles.service';
 
 export const CANDLES_QUEUE = 'candle-aggregation';
-const REDIS_CONNECTION: ConnectionOptions = { url: process.env.REDIS_URL ?? 'redis://localhost:6379' };
+const REDIS_CONNECTION: ConnectionOptions = {
+  url: process.env.REDIS_URL ?? 'redis://localhost:6379',
+};
 
 interface CandleJobData {
   interval: CandleInterval;
@@ -34,19 +41,27 @@ export class CandlesWorker implements OnModuleInit, OnModuleDestroy {
   async onModuleInit(): Promise<void> {
     this.worker = new Worker<CandleJobData, void>(
       CANDLES_QUEUE,
-      (job: Job<CandleJobData>): Promise<void> => this.service.aggregate(job.data.interval),
+      (job: Job<CandleJobData>): Promise<void> =>
+        this.service.aggregate(job.data.interval),
       { connection: REDIS_CONNECTION },
     );
     this.worker.on('completed', (job: Job<CandleJobData>) => {
       this.logger.log(`candle job completed interval=${job.data.interval}`);
     });
-    this.worker.on('failed', (job: Job<CandleJobData> | undefined, err: Error) => {
-      this.logger.warn(`candle job failed interval=${job?.data.interval} err=${err.message}`);
-    });
+    this.worker.on(
+      'failed',
+      (job: Job<CandleJobData> | undefined, err: Error) => {
+        this.logger.warn(
+          `candle job failed interval=${job?.data.interval} err=${err.message}`,
+        );
+      },
+    );
 
     // Clear stale repeatable jobs and re-register
     const existing = await this.queue.getRepeatableJobs();
-    await Promise.all(existing.map((j) => this.queue.removeRepeatableByKey(j.key)));
+    await Promise.all(
+      existing.map((j) => this.queue.removeRepeatableByKey(j.key)),
+    );
 
     for (const { interval, cron } of SCHEDULES) {
       await this.queue.add(

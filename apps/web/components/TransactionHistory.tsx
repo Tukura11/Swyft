@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 import { useSwaps, SwapSnapshot } from "@/hooks/useSwaps";
 import { useLpActivity, LpActivity, LpActivityType } from "@/hooks/useLpActivity";
@@ -203,9 +204,9 @@ function SwapTable({ swaps, loading, error, getExplorerUrl, formatDate, truncate
           Your swaps will appear here once they are indexed.{" "}
           <span className="text-zinc-500 dark:text-zinc-400">
             Head to the{" "}
-            <a href="/" className="underline hover:text-indigo-500 transition-colors">
+            <Link href="/" className="underline hover:text-indigo-500 transition-colors">
               Swap page
-            </a>{" "}
+            </Link>{" "}
             to make your first trade.
           </span>
         </p>
@@ -289,9 +290,9 @@ function LpTable({ activities, loading, error, getExplorerUrl, formatDate, trunc
           Your liquidity events will appear here once they are indexed.{" "}
           <span className="text-zinc-500 dark:text-zinc-400">
             Visit the{" "}
-            <a href="/pools" className="underline hover:text-indigo-500 transition-colors">
+            <Link href="/pools" className="underline hover:text-indigo-500 transition-colors">
               Pools page
-            </a>{" "}
+            </Link>{" "}
             to add liquidity and start earning fees.
           </span>
         </p>

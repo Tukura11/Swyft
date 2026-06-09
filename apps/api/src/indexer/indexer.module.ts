@@ -13,11 +13,26 @@ export const QUEUE_FEES_COLLECTED = 'QUEUE_FEES_COLLECTED';
   controllers: [IndexerController],
   providers: [
     IndexerWorker,
-    { provide: QUEUE_POOL_CREATED, useFactory: () => createQueue(QUEUE_NAMES.POOL_CREATED) },
-    { provide: QUEUE_SWAP_PROCESSED, useFactory: () => createQueue(QUEUE_NAMES.SWAP_PROCESSED) },
-    { provide: QUEUE_POSITION_MINTED, useFactory: () => createQueue(QUEUE_NAMES.POSITION_MINTED) },
-    { provide: QUEUE_POSITION_BURNED, useFactory: () => createQueue(QUEUE_NAMES.POSITION_BURNED) },
-    { provide: QUEUE_FEES_COLLECTED, useFactory: () => createQueue(QUEUE_NAMES.FEES_COLLECTED) },
+    {
+      provide: QUEUE_POOL_CREATED,
+      useFactory: () => createQueue(QUEUE_NAMES.POOL_CREATED),
+    },
+    {
+      provide: QUEUE_SWAP_PROCESSED,
+      useFactory: () => createQueue(QUEUE_NAMES.SWAP_PROCESSED),
+    },
+    {
+      provide: QUEUE_POSITION_MINTED,
+      useFactory: () => createQueue(QUEUE_NAMES.POSITION_MINTED),
+    },
+    {
+      provide: QUEUE_POSITION_BURNED,
+      useFactory: () => createQueue(QUEUE_NAMES.POSITION_BURNED),
+    },
+    {
+      provide: QUEUE_FEES_COLLECTED,
+      useFactory: () => createQueue(QUEUE_NAMES.FEES_COLLECTED),
+    },
   ],
   exports: [
     IndexerWorker,

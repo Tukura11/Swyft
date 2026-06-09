@@ -40,16 +40,11 @@ describe('PriceService', () => {
   let mockCache: jest.Mocked<Pick<CacheService, 'get' | 'set' | 'invalidate'>>;
 
   beforeEach(() => {
+    mockSub = buildMockSubscriber();
     mockCache = {
       get: jest.fn().mockResolvedValue(null),
       set: jest.fn().mockResolvedValue(undefined),
       invalidate: jest.fn().mockResolvedValue(undefined),
-    };
-    service = new PriceService(mockCache as unknown as CacheService);
-    mockSub = buildMockSubscriber();
-    const mockCache = {
-      get: jest.fn().mockResolvedValue(null),
-      set: jest.fn().mockResolvedValue(undefined),
       createSubscriber: jest.fn().mockReturnValue(mockSub),
     } as unknown as CacheService;
     service = new PriceService(mockCache);
@@ -177,34 +172,35 @@ describe('PriceService', () => {
 
   describe('subscribe/unsubscribe', () => {
     it('subscribes to Redis channel on first client', () => {
-    const client = mockClient();
-    service.subscribe(client, 'pool-1');
-    expect(mockSub.subscribe).toHaveBeenCalledWith('prices:pool-1');
-  });
+      const client = mockClient();
+      service.subscribe(client, 'pool-1');
+      expect(mockSub.subscribe).toHaveBeenCalledWith('prices:pool-1');
+    });
 
-  it('unsubscribes from Redis channel when last client leaves', () => {
-    const client = mockClient();
-    service.subscribe(client, 'pool-1');
-    service.unsubscribe(client, 'pool-1');
-    expect(mockSub.unsubscribe).toHaveBeenCalledWith('prices:pool-1');
-  });
+    it('unsubscribes from Redis channel when last client leaves', () => {
+      const client = mockClient();
+      service.subscribe(client, 'pool-1');
+      service.unsubscribe(client, 'pool-1');
+      expect(mockSub.unsubscribe).toHaveBeenCalledWith('prices:pool-1');
+    });
 
-  it('re-subscribes to active channels on Redis reconnect', () => {
-    const c1 = mockClient();
-    const c2 = mockClient();
-    service.subscribe(c1, 'pool-1');
-    service.subscribe(c2, 'pool-2');
+    it('re-subscribes to active channels on Redis reconnect', () => {
+      const c1 = mockClient();
+      const c2 = mockClient();
+      service.subscribe(c1, 'pool-1');
+      service.subscribe(c2, 'pool-2');
 
-    // Simulate Redis 'ready' event (reconnect)
-    const sub = mockSub as unknown as {
-      _handlers: Record<string, (...args: unknown[]) => void>;
-    };
-    sub._handlers['ready']?.();
+      // Simulate Redis 'ready' event (reconnect)
+      const sub = mockSub as unknown as {
+        _handlers: Record<string, (...args: unknown[]) => void>;
+      };
+      sub._handlers['ready']?.();
 
-    expect(mockSub.subscribe).toHaveBeenCalledWith(
-      expect.stringContaining('prices:pool-'),
-      expect.stringContaining('prices:pool-'),
-    );
+      expect(mockSub.subscribe).toHaveBeenCalledWith(
+        expect.stringContaining('prices:pool-'),
+        expect.stringContaining('prices:pool-'),
+      );
+    });
   });
 
   describe('load test — 1000 concurrent subscribers', () => {

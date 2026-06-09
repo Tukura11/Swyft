@@ -23,7 +23,9 @@ export class ApiKeyGuard implements CanActivate {
     if (!raw) throw new UnauthorizedException('Missing X-Api-Key header');
 
     const hashed = createHash('sha256').update(raw).digest('hex');
-    const record = await this.prisma.apiKey.findUnique({ where: { hashedKey: hashed } });
+    const record = await this.prisma.apiKey.findUnique({
+      where: { hashedKey: hashed },
+    });
 
     if (!record || record.revoked) {
       throw new UnauthorizedException('Invalid or revoked API key');

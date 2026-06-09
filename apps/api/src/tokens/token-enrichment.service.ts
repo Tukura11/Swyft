@@ -1,6 +1,6 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { PrismaClient } from '@prisma/client';
-import { SorobanRpc, Contract, scValToNative, xdr } from '@stellar/stellar-sdk';
+import { Contract, rpc, scValToNative } from '@stellar/stellar-sdk';
 
 interface TokenListEntry {
   address: string;
@@ -22,7 +22,8 @@ export class TokenEnrichmentService implements OnModuleInit {
   private readonly tokenListUrl: string | undefined;
 
   constructor() {
-    this.rpcUrl = process.env.STELLAR_RPC_URL ?? 'https://soroban-testnet.stellar.org';
+    this.rpcUrl =
+      process.env.STELLAR_RPC_URL ?? 'https://soroban-testnet.stellar.org';
     this.tokenListUrl = process.env.TOKEN_LIST_URL;
   }
 
@@ -38,10 +39,12 @@ export class TokenEnrichmentService implements OnModuleInit {
   }
 
   private async enrichAll(): Promise<void> {
-    const tokens = await this.prisma.token.findMany({ select: { contractAddress: true } });
+    const tokens = await this.prisma.token.findMany({
+      select: { address: true },
+    });
     const listMap = await this.fetchTokenListMap();
-    for (const { contractAddress } of tokens) {
-      await this.upsertToken(contractAddress, listMap);
+    for (const { address } of tokens) {
+      await this.upsertToken(address, listMap);
     }
   }
 
@@ -54,7 +57,7 @@ export class TokenEnrichmentService implements OnModuleInit {
       const listed = listMap.get(contractAddress.toLowerCase());
 
       await this.prisma.token.upsert({
-        where: { contractAddress },
+        where: { address: contractAddress },
         update: {
           symbol: onChain.symbol ?? listed?.symbol ?? 'UNKNOWN',
           name: onChain.name ?? listed?.name ?? contractAddress,
@@ -62,7 +65,7 @@ export class TokenEnrichmentService implements OnModuleInit {
           logoUri: listed?.logoURI ?? null,
         },
         create: {
-          contractAddress,
+          address: contractAddress,
           symbol: onChain.symbol ?? listed?.symbol ?? 'UNKNOWN',
           name: onChain.name ?? listed?.name ?? contractAddress,
           decimals: onChain.decimals ?? listed?.decimals ?? 7,
@@ -79,7 +82,7 @@ export class TokenEnrichmentService implements OnModuleInit {
   private async fetchOnChainMetadata(
     contractAddress: string,
   ): Promise<{ symbol?: string; name?: string; decimals?: number }> {
-    const server = new SorobanRpc.Server(this.rpcUrl, {
+    const server = new rpc.Server(this.rpcUrl, {
       allowHttp: this.rpcUrl.startsWith('http://'),
     });
     const contract = new Contract(contractAddress);
@@ -89,8 +92,8 @@ export class TokenEnrichmentService implements OnModuleInit {
       const result = await server.simulateTransaction(
         op as unknown as Parameters<typeof server.simulateTransaction>[0],
       );
-      if (SorobanRpc.Api.isSimulationError(result)) return undefined;
-      const sim = result as SorobanRpc.Api.SimulateTransactionSuccessResponse;
+      if (rpc.Api.isSimulationError(result)) return undefined;
+      const sim = result;
       return sim.result ? scValToNative(sim.result.retval) : undefined;
     };
 

@@ -85,6 +85,96 @@ function SkeletonRow() {
   );
 }
 
+// ─── Table sub-components ─────────────────────────────────────────────────────
+
+function SortHeader({
+  label,
+  col,
+  sortKey,
+  isLoading,
+  onSort,
+}: {
+  label: string;
+  col: SortKey;
+  sortKey: SortKey;
+  isLoading: boolean;
+  onSort: (key: SortKey) => void;
+}) {
+  const active = sortKey === col;
+  return (
+    <button
+      onClick={() => onSort(col)}
+      disabled={isLoading}
+      aria-sort={active ? "descending" : "none"}
+      className={`flex items-center gap-1 font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
+        active
+          ? "text-indigo-500"
+          : "text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100"
+      }`}
+    >
+      {label}
+      <span className="text-xs" aria-hidden="true">
+        {active ? "↓" : "↕"}
+      </span>
+    </button>
+  );
+}
+
+function PoolRow({
+  pool,
+  onNavigate,
+}: {
+  pool: PoolListItem;
+  onNavigate: (path: string) => void;
+}) {
+  const t0 = tokenFromAddress(pool.token0);
+  const t1 = tokenFromAddress(pool.token1);
+  return (
+    <tr
+      onClick={() => onNavigate(`/pools/${pool.id}`)}
+      className="cursor-pointer border-b border-zinc-100 hover:bg-zinc-50 dark:border-zinc-800 dark:hover:bg-zinc-900 transition-colors"
+    >
+      <td className="px-4 py-3">
+        <div className="flex items-center gap-2">
+          <div className="flex -space-x-2">
+            <TokenLogo token={t0} size={24} />
+            <TokenLogo token={t1} size={24} />
+          </div>
+          <span className="font-medium text-zinc-900 dark:text-zinc-100">
+            {t0.symbol}/{t1.symbol}
+          </span>
+          <span className="rounded-full bg-zinc-100 px-2 py-0.5 text-xs text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400">
+            {fmtFee(pool.feeTier)}
+          </span>
+        </div>
+      </td>
+      <td className="px-4 py-3 text-right text-zinc-700 dark:text-zinc-300">
+        {fmt(pool.tvl)}
+      </td>
+      <td className="px-4 py-3 text-right text-zinc-700 dark:text-zinc-300">
+        {fmt(pool.volume24h)}
+      </td>
+      <td className="px-4 py-3 text-right text-zinc-700 dark:text-zinc-300">
+        {fmt(pool.volume7d)}
+      </td>
+      <td className="px-4 py-3 text-right font-medium text-emerald-600 dark:text-emerald-400">
+        {fmtApr(pool.feeApr)}
+      </td>
+      <td className="px-4 py-3 text-right">
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onNavigate(`/pools/${pool.id}/add-liquidity`);
+          }}
+          className="rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-indigo-700 transition-colors"
+        >
+          Add liquidity
+        </button>
+      </td>
+    </tr>
+  );
+}
+
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function PoolsPage() {
@@ -113,78 +203,6 @@ export default function PoolsPage() {
     if (isLoading) return;
     setSortKey(key);
     setPage(1);
-  }
-
-  /** Sort column header — disabled while data is loading */
-  function SortHeader({ label, col }: { label: string; col: SortKey }) {
-    const active = sortKey === col;
-    return (
-      <button
-        onClick={() => handleSort(col)}
-        disabled={isLoading}
-        aria-sort={active ? "descending" : "none"}
-        className={`flex items-center gap-1 font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
-          active
-            ? "text-indigo-500"
-            : "text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100"
-        }`}
-      >
-        {label}
-        <span className="text-xs" aria-hidden="true">
-          {active ? "↓" : "↕"}
-        </span>
-      </button>
-    );
-  }
-
-  /** A single data row — clicking navigates to the pool detail page */
-  function PoolRow({ pool }: { pool: PoolListItem }) {
-    const t0 = tokenFromAddress(pool.token0);
-    const t1 = tokenFromAddress(pool.token1);
-    return (
-      <tr
-        onClick={() => router.push(`/pools/${pool.id}`)}
-        className="cursor-pointer border-b border-zinc-100 hover:bg-zinc-50 dark:border-zinc-800 dark:hover:bg-zinc-900 transition-colors"
-      >
-        <td className="px-4 py-3">
-          <div className="flex items-center gap-2">
-            <div className="flex -space-x-2">
-              <TokenLogo token={t0} size={24} />
-              <TokenLogo token={t1} size={24} />
-            </div>
-            <span className="font-medium text-zinc-900 dark:text-zinc-100">
-              {t0.symbol}/{t1.symbol}
-            </span>
-            <span className="rounded-full bg-zinc-100 px-2 py-0.5 text-xs text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400">
-              {fmtFee(pool.feeTier)}
-            </span>
-          </div>
-        </td>
-        <td className="px-4 py-3 text-right text-zinc-700 dark:text-zinc-300">
-          {fmt(pool.tvl)}
-        </td>
-        <td className="px-4 py-3 text-right text-zinc-700 dark:text-zinc-300">
-          {fmt(pool.volume24h)}
-        </td>
-        <td className="px-4 py-3 text-right text-zinc-700 dark:text-zinc-300">
-          {fmt(pool.volume7d)}
-        </td>
-        <td className="px-4 py-3 text-right font-medium text-emerald-600 dark:text-emerald-400">
-          {fmtApr(pool.feeApr)}
-        </td>
-        <td className="px-4 py-3 text-right">
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              router.push(`/pools/${pool.id}/add-liquidity`);
-            }}
-            className="rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-indigo-700 transition-colors"
-          >
-            Add liquidity
-          </button>
-        </td>
-      </tr>
-    );
   }
 
   const pools = data?.items ?? [];
@@ -226,14 +244,14 @@ export default function PoolsPage() {
             <tr className="border-b border-zinc-100 dark:border-zinc-800">
               <th className="px-4 py-3 text-left text-zinc-500 font-medium">Pool</th>
               <th className="px-4 py-3 text-right">
-                <SortHeader label="TVL" col="tvl" />
+                <SortHeader label="TVL" col="tvl" sortKey={sortKey} isLoading={isLoading} onSort={handleSort} />
               </th>
               <th className="px-4 py-3 text-right">
-                <SortHeader label="24h Volume" col="volume" />
+                <SortHeader label="24h Volume" col="volume" sortKey={sortKey} isLoading={isLoading} onSort={handleSort} />
               </th>
               <th className="px-4 py-3 text-right text-zinc-500 font-medium">7d Volume</th>
               <th className="px-4 py-3 text-right">
-                <SortHeader label="Fee APR" col="apr" />
+                <SortHeader label="Fee APR" col="apr" sortKey={sortKey} isLoading={isLoading} onSort={handleSort} />
               </th>
               <th className="px-4 py-3" />
             </tr>
@@ -307,7 +325,7 @@ export default function PoolsPage() {
 
             {/* Data rows — rendered even while a background refresh is in progress */}
             {pools.map((pool) => (
-              <PoolRow key={pool.id} pool={pool} />
+              <PoolRow key={pool.id} pool={pool} onNavigate={router.push} />
             ))}
           </tbody>
         </table>

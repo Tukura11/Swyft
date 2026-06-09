@@ -58,14 +58,17 @@ describe('AllExceptionsFilter', () => {
   describe('400 — ValidationPipe errors', () => {
     it('returns structured validationErrors array', () => {
       const exception = new BadRequestException({
-        message: ['email must be an email', 'username must be longer than or equal to 3 characters'],
+        message: [
+          'email must be an email',
+          'username must be longer than or equal to 3 characters',
+        ],
         error: 'Bad Request',
         statusCode: 400,
       });
 
       filter.catch(exception, host);
 
-      const [body, status] = replyMock.mock.calls[0];
+      const [, body, status] = replyMock.mock.calls[0];
 
       expect(status).toBe(HttpStatus.BAD_REQUEST);
       expect(body.statusCode).toBe(400);
@@ -85,7 +88,7 @@ describe('AllExceptionsFilter', () => {
       });
 
       filter.catch(exception, host);
-      const [body] = replyMock.mock.calls[0];
+      const [, body] = replyMock.mock.calls[0];
 
       const emailError = body.validationErrors.find(
         (e: { field: string }) => e.field === 'email',
@@ -102,7 +105,7 @@ describe('AllExceptionsFilter', () => {
       const exception = new BadRequestException('ID format is invalid');
       filter.catch(exception, host);
 
-      const [body, status] = replyMock.mock.calls[0];
+      const [, body, status] = replyMock.mock.calls[0];
       expect(status).toBe(400);
       expect(body.message).toBe('ID format is invalid');
     });
@@ -112,10 +115,12 @@ describe('AllExceptionsFilter', () => {
 
   describe('401 — UnauthorizedException', () => {
     it('returns 401 with correct shape', () => {
-      const exception = new UnauthorizedException('Token is invalid or expired');
+      const exception = new UnauthorizedException(
+        'Token is invalid or expired',
+      );
       filter.catch(exception, host);
 
-      const [body, status] = replyMock.mock.calls[0];
+      const [, body, status] = replyMock.mock.calls[0];
       expect(status).toBe(401);
       expect(body.statusCode).toBe(401);
       expect(body.error).toMatch(/Unauthorized/i);
@@ -126,10 +131,12 @@ describe('AllExceptionsFilter', () => {
 
   describe('404 — NotFoundException', () => {
     it('returns 404 with descriptive message', () => {
-      const exception = new NotFoundException("User with identifier 'abc-123' was not found");
+      const exception = new NotFoundException(
+        "User with identifier 'abc-123' was not found",
+      );
       filter.catch(exception, host);
 
-      const [body, status] = replyMock.mock.calls[0];
+      const [, body, status] = replyMock.mock.calls[0];
       expect(status).toBe(404);
       expect(body.message).toContain('abc-123');
     });
@@ -142,7 +149,7 @@ describe('AllExceptionsFilter', () => {
       process.env.NODE_ENV = 'production';
       filter.catch(new Error('DB connection refused'), host);
 
-      const [body, status] = replyMock.mock.calls[0];
+      const [, body, status] = replyMock.mock.calls[0];
       expect(status).toBe(500);
       expect(body.message).toBe('An unexpected error occurred');
       // must not expose the real error message in prod
@@ -153,14 +160,14 @@ describe('AllExceptionsFilter', () => {
       process.env.NODE_ENV = 'test';
       filter.catch(new Error('DB connection refused'), host);
 
-      const [body] = replyMock.mock.calls[0];
+      const [, body] = replyMock.mock.calls[0];
       expect(body.message).toContain('DB connection refused');
     });
 
     it('always includes timestamp and path', () => {
       filter.catch(new Error('boom'), host);
 
-      const [body] = replyMock.mock.calls[0];
+      const [, body] = replyMock.mock.calls[0];
       expect(body.timestamp).toMatch(/^\d{4}-\d{2}-\d{2}T/);
       expect(body.path).toBeDefined();
     });
@@ -176,17 +183,20 @@ describe('AllExceptionsFilter', () => {
       new Error('boom'),
     ];
 
-    it.each(exceptions)('always includes statusCode, message, error, timestamp, path', (exc) => {
-      filter.catch(exc, host);
-      const [body] = replyMock.mock.calls[0];
+    it.each(exceptions)(
+      'always includes statusCode, message, error, timestamp, path',
+      (exc) => {
+        filter.catch(exc, host);
+        const [, body] = replyMock.mock.calls[0];
 
-      expect(body).toHaveProperty('statusCode');
-      expect(body).toHaveProperty('message');
-      expect(body).toHaveProperty('error');
-      expect(body).toHaveProperty('timestamp');
-      expect(body).toHaveProperty('path');
+        expect(body).toHaveProperty('statusCode');
+        expect(body).toHaveProperty('message');
+        expect(body).toHaveProperty('error');
+        expect(body).toHaveProperty('timestamp');
+        expect(body).toHaveProperty('path');
 
-      replyMock.mockClear();
-    });
+        replyMock.mockClear();
+      },
+    );
   });
 });

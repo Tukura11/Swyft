@@ -57,8 +57,18 @@ describe('PoolsController - Ticks Endpoint', () => {
     it('should return ticks for valid pool', async () => {
       poolsService.findPoolById.mockResolvedValue({
         id: validPoolId,
-        token0: { address: '0x123', symbol: 'USDC', name: 'USD Coin', decimals: 6 },
-        token1: { address: '0x456', symbol: 'ETH', name: 'Ethereum', decimals: 18 },
+        token0: {
+          address: '0x123',
+          symbol: 'USDC',
+          name: 'USD Coin',
+          decimals: 6,
+        },
+        token1: {
+          address: '0x456',
+          symbol: 'ETH',
+          name: 'Ethereum',
+          decimals: 18,
+        },
         feeTier: 3000,
         currentSqrtPrice: '202918467837465283647382910',
         currentTick: -276324,
@@ -76,14 +86,28 @@ describe('PoolsController - Ticks Endpoint', () => {
 
       expect(result).toEqual(mockTicks);
       expect(poolsService.findPoolById).toHaveBeenCalledWith(validPoolId);
-      expect(poolsService.getPoolTicks).toHaveBeenCalledWith(validPoolId, {});
+      expect(poolsService.getPoolTicks).toHaveBeenCalledWith(
+        validPoolId,
+        undefined,
+        undefined,
+      );
     });
 
     it('should return empty array for pool with no ticks', async () => {
       poolsService.findPoolById.mockResolvedValue({
         id: validPoolId,
-        token0: { address: '0x123', symbol: 'USDC', name: 'USD Coin', decimals: 6 },
-        token1: { address: '0x456', symbol: 'ETH', name: 'Ethereum', decimals: 18 },
+        token0: {
+          address: '0x123',
+          symbol: 'USDC',
+          name: 'USD Coin',
+          decimals: 6,
+        },
+        token1: {
+          address: '0x456',
+          symbol: 'ETH',
+          name: 'Ethereum',
+          decimals: 18,
+        },
         feeTier: 3000,
         currentSqrtPrice: '202918467837465283647382910',
         currentTick: -276324,
@@ -105,16 +129,26 @@ describe('PoolsController - Ticks Endpoint', () => {
     it('should throw NotFoundException for unknown pool', async () => {
       poolsService.findPoolById.mockResolvedValue(null);
 
-      await expect(
-        controller.getPoolTicks('unknown_pool', {})
-      ).rejects.toThrow(NotFoundException);
+      await expect(controller.getPoolTicks('unknown_pool', {})).rejects.toThrow(
+        NotFoundException,
+      );
     });
 
     it('should support lowerTick and upperTick filters', async () => {
       poolsService.findPoolById.mockResolvedValue({
         id: validPoolId,
-        token0: { address: '0x123', symbol: 'USDC', name: 'USD Coin', decimals: 6 },
-        token1: { address: '0x456', symbol: 'ETH', name: 'Ethereum', decimals: 18 },
+        token0: {
+          address: '0x123',
+          symbol: 'USDC',
+          name: 'USD Coin',
+          decimals: 6,
+        },
+        token1: {
+          address: '0x456',
+          symbol: 'ETH',
+          name: 'Ethereum',
+          decimals: 18,
+        },
         feeTier: 3000,
         currentSqrtPrice: '202918467837465283647382910',
         currentTick: -276324,
@@ -131,15 +165,29 @@ describe('PoolsController - Ticks Endpoint', () => {
       const query = { lowerTick: -276330, upperTick: -276320 };
       const result = await controller.getPoolTicks(validPoolId, query);
 
-      expect(poolsService.getPoolTicks).toHaveBeenCalledWith(validPoolId, query);
+      expect(poolsService.getPoolTicks).toHaveBeenCalledWith(
+        validPoolId,
+        -276330,
+        -276320,
+      );
       expect(result).toEqual([mockTicks[0]]);
     });
 
     it('should throw BadRequestException when lowerTick > upperTick', async () => {
       poolsService.findPoolById.mockResolvedValue({
         id: validPoolId,
-        token0: { address: '0x123', symbol: 'USDC', name: 'USD Coin', decimals: 6 },
-        token1: { address: '0x456', symbol: 'ETH', name: 'Ethereum', decimals: 18 },
+        token0: {
+          address: '0x123',
+          symbol: 'USDC',
+          name: 'USD Coin',
+          decimals: 6,
+        },
+        token1: {
+          address: '0x456',
+          symbol: 'ETH',
+          name: 'Ethereum',
+          decimals: 18,
+        },
         feeTier: 3000,
         currentSqrtPrice: '202918467837465283647382910',
         currentTick: -276324,
@@ -154,16 +202,26 @@ describe('PoolsController - Ticks Endpoint', () => {
 
       const query = { lowerTick: -276320, upperTick: -276330 };
 
-      await expect(
-        controller.getPoolTicks(validPoolId, query)
-      ).rejects.toThrow(BadRequestException);
+      await expect(controller.getPoolTicks(validPoolId, query)).rejects.toThrow(
+        BadRequestException,
+      );
     });
 
     it('should return ticks in ascending order', async () => {
       poolsService.findPoolById.mockResolvedValue({
         id: validPoolId,
-        token0: { address: '0x123', symbol: 'USDC', name: 'USD Coin', decimals: 6 },
-        token1: { address: '0x456', symbol: 'ETH', name: 'Ethereum', decimals: 18 },
+        token0: {
+          address: '0x123',
+          symbol: 'USDC',
+          name: 'USD Coin',
+          decimals: 6,
+        },
+        token1: {
+          address: '0x456',
+          symbol: 'ETH',
+          name: 'Ethereum',
+          decimals: 18,
+        },
         feeTier: 3000,
         currentSqrtPrice: '202918467837465283647382910',
         currentTick: -276324,

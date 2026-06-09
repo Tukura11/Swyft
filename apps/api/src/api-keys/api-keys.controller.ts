@@ -1,4 +1,13 @@
-import { Body, Controller, Delete, Get, Param, Post, Request, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  Post,
+  Request,
+  UseGuards,
+} from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { ApiKeysService } from './api-keys.service';
@@ -22,7 +31,9 @@ export class ApiKeysController {
   }
 
   @Get()
-  @ApiOperation({ summary: 'List active API keys for the authenticated wallet' })
+  @ApiOperation({
+    summary: 'List active API keys for the authenticated wallet',
+  })
   list(@Request() req: AuthRequest) {
     return this.service.list(req.user.walletAddress);
   }

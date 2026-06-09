@@ -53,7 +53,7 @@ export class HorizonService implements OnModuleInit, OnModuleDestroy {
 
       for (const record of page.records) {
         this.cursor = record.paging_token;
-        const event = this.toPrice(record as unknown as EffectRecord);
+        const event = this.toPrice(record);
         if (!event) continue;
 
         this.priceService.broadcastPrice(event);

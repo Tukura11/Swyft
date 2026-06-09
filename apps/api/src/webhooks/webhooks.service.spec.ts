@@ -2,7 +2,11 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { WebhooksService } from './webhooks.service';
 import { WebhookWorker } from './webhook.processor';
 import { PrismaService } from '../prisma/prisma.service';
-import { WEBHOOK_EVENTS, WebhookEventType, WebhookPayload } from './webhook.types';
+import {
+  WEBHOOK_EVENTS,
+  WebhookEventType,
+  WebhookPayload,
+} from './webhook.types';
 
 // ── Mock factories ────────────────────────────────────────────────────────────
 
@@ -114,7 +118,10 @@ describe('WebhooksService', () => {
 
     it('filters out unknown event types before persisting', async () => {
       prisma.webhook.create.mockResolvedValue(mockWebhookRecord);
-      const invalidTypes = ['pool.created', 'unknown.event'] as WebhookEventType[];
+      const invalidTypes = [
+        'pool.created',
+        'unknown.event',
+      ] as WebhookEventType[];
 
       await service.create(OWNER, URL, invalidTypes);
 
@@ -200,7 +207,9 @@ describe('WebhooksService', () => {
     it('resolves without throwing when the webhook does not exist', async () => {
       prisma.webhook.deleteMany.mockResolvedValue({ count: 0 });
 
-      await expect(service.remove('nonexistent-id', OWNER)).resolves.toBeUndefined();
+      await expect(
+        service.remove('nonexistent-id', OWNER),
+      ).resolves.toBeUndefined();
     });
 
     it('does not allow deleting a webhook owned by a different wallet', async () => {
@@ -218,7 +227,11 @@ describe('WebhooksService', () => {
 
   describe('dispatch', () => {
     const event: WebhookEventType = 'pool.created';
-    const data: Record<string, unknown> = { poolId: 'pool-1', token0: 'XLM', token1: 'USDC' };
+    const data: Record<string, unknown> = {
+      poolId: 'pool-1',
+      token0: 'XLM',
+      token1: 'USDC',
+    };
 
     it('finds all enabled webhooks subscribed to the event', async () => {
       prisma.webhook.findMany.mockResolvedValue([]);
@@ -247,7 +260,7 @@ describe('WebhooksService', () => {
 
       await service.dispatch(event, data);
 
-      const [webhookId, payload] = (worker.dispatch as jest.Mock).mock.calls[0] as [
+      const [webhookId, payload] = worker.dispatch.mock.calls[0] as [
         string,
         WebhookPayload,
       ];
@@ -266,7 +279,10 @@ describe('WebhooksService', () => {
     });
 
     it('resolves once all delivery jobs are enqueued', async () => {
-      prisma.webhook.findMany.mockResolvedValue([{ id: 'wh-1' }, { id: 'wh-2' }]);
+      prisma.webhook.findMany.mockResolvedValue([
+        { id: 'wh-1' },
+        { id: 'wh-2' },
+      ]);
       worker.dispatch.mockResolvedValue(undefined);
 
       await expect(service.dispatch(event, data)).resolves.toBeUndefined();

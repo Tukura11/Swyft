@@ -1,4 +1,9 @@
-import { Injectable, Logger, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  OnModuleDestroy,
+  OnModuleInit,
+} from '@nestjs/common';
 import { Queue, Worker } from 'bullmq';
 import { AnalyticsService } from './analytics.service';
 import { makeQueueOptions } from '../indexer/queues';
@@ -28,14 +33,20 @@ export class AnalyticsScheduler implements OnModuleInit, OnModuleDestroy {
     );
 
     this.worker.on('failed', (job, err) => {
-      this.logger.error(`Analytics job failed jobId=${job?.id} err=${err.message}`, err.stack);
+      this.logger.error(
+        `Analytics job failed jobId=${job?.id} err=${err.message}`,
+        err.stack,
+      );
     });
 
     // Upsert the repeatable job — runs every 15 minutes
     await this.queue.upsertJobScheduler(
       'analytics-refresh-scheduler',
       { every: 15 * 60 * 1000 },
-      { name: JOB_NAME, opts: { removeOnComplete: { count: 5 }, removeOnFail: false } },
+      {
+        name: JOB_NAME,
+        opts: { removeOnComplete: { count: 5 }, removeOnFail: false },
+      },
     );
 
     this.logger.log('Analytics scheduler started (every 15 min)');

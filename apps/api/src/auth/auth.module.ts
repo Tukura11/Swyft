@@ -5,6 +5,7 @@ import { JwtModule } from '@nestjs/jwt';
 import { RedisModule } from '../redis/redis.module';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
+import { NonceController } from './nonce.controller';
 
 @Module({
   imports: [
@@ -19,7 +20,8 @@ import { AuthService } from './auth.service';
         secret: config.getOrThrow<string>('JWT_SECRET'),
         // Default sign options; individual sign() calls may override expiresIn.
         signOptions: {
-          expiresIn: config.get<string>('JWT_EXPIRES_IN') ?? '15m',
+          expiresIn: (config.get<string>('JWT_EXPIRES_IN') ??
+            '15m') as `${number}m`,
         },
       }),
     }),
@@ -27,7 +29,7 @@ import { AuthService } from './auth.service';
     // Provides the REDIS_CLIENT injection token used in AuthService.
     RedisModule,
   ],
-  controllers: [AuthController],
+  controllers: [AuthController, NonceController],
   providers: [AuthService],
   // Export AuthService so other modules (e.g. a Guards module) can reuse it.
   exports: [AuthService, JwtModule],

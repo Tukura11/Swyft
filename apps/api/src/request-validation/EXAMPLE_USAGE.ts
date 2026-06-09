@@ -86,7 +86,12 @@ export class UsersController {
     @Query() pagination: PaginationQueryDto,
   ): Promise<PaginatedResponseDto<unknown>> {
     const [users, total] = await this.usersService.findAll(pagination);
-    return new PaginatedResponseDto(users, total, pagination.page ?? 1, pagination.limit ?? 20);
+    return new PaginatedResponseDto(
+      users,
+      total,
+      pagination.page ?? 1,
+      pagination.limit ?? 20,
+    );
   }
 
   @Get(':id')
@@ -112,9 +117,19 @@ export class UsersController {
 // ── Stub service (replace with real implementation) ───────────────────────────
 
 class UsersServiceStub {
-  async findByEmail(_email: string) { return null; }
-  async create(_dto: CreateUserDto) { return {}; }
-  async findAll(_p: PaginationQueryDto): Promise<[unknown[], number]> { return [[], 0]; }
-  async findById(_id: string) { return null; }
-  async delete(_id: string) { return {}; }
+  async findByEmail(_email: string) {
+    return null;
+  }
+  async create(_dto: CreateUserDto) {
+    return {};
+  }
+  async findAll(_p: PaginationQueryDto): Promise<[unknown[], number]> {
+    return [[], 0];
+  }
+  async findById(_id: string) {
+    return null;
+  }
+  async delete(_id: string) {
+    return {};
+  }
 }

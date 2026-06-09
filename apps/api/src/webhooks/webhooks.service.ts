@@ -1,7 +1,11 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { WebhookWorker } from './webhook.processor';
-import { WEBHOOK_EVENTS, WebhookEventType, WebhookPayload } from './webhook.types';
+import {
+  WEBHOOK_EVENTS,
+  WebhookEventType,
+  WebhookPayload,
+} from './webhook.types';
 
 @Injectable()
 export class WebhooksService {
@@ -31,7 +35,13 @@ export class WebhooksService {
       (WEBHOOK_EVENTS as readonly string[]).includes(e),
     );
     return this.prisma.webhook.create({
-      data: { ownerWallet, url, eventTypes: validTypes, secret, largeSwapUsd: largeSwapUsd ?? 10000 },
+      data: {
+        ownerWallet,
+        url,
+        eventTypes: validTypes,
+        secret,
+        largeSwapUsd: largeSwapUsd ?? 10000,
+      },
       select: { id: true, url: true, eventTypes: true, createdAt: true },
     });
   }
@@ -45,7 +55,13 @@ export class WebhooksService {
   list(ownerWallet: string) {
     return this.prisma.webhook.findMany({
       where: { ownerWallet },
-      select: { id: true, url: true, eventTypes: true, disabled: true, createdAt: true },
+      select: {
+        id: true,
+        url: true,
+        eventTypes: true,
+        disabled: true,
+        createdAt: true,
+      },
     });
   }
 
@@ -73,7 +89,13 @@ export class WebhooksService {
       select: { id: true },
     });
 
-    const payload: WebhookPayload = { event, timestamp: new Date().toISOString(), data };
-    await Promise.all(webhooks.map((w) => this.worker.dispatch(w.id, payload)));
+    const payload: WebhookPayload = {
+      event,
+      timestamp: new Date().toISOString(),
+      data,
+    };
+    await Promise.all(
+      webhooks.map((w: { id: string }) => this.worker.dispatch(w.id, payload)),
+    );
   }
 }
