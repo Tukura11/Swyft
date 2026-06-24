@@ -79,12 +79,47 @@ export class CacheService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
-  async set<T>(key: string, value: T, ttlSeconds: number): Promise<void> {
+  async set<T>(key: string, value: T, ttlSeconds?: number): Promise<void> {
     if (!this.available) return;
     try {
-      await this.client!.set(key, JSON.stringify(value), 'EX', ttlSeconds);
+      const serialized = JSON.stringify(value);
+      if (ttlSeconds === undefined) {
+        await this.client!.set(key, serialized);
+      } else {
+        await this.client!.set(key, serialized, 'EX', ttlSeconds);
+      }
     } catch {
       /* degrade gracefully */
+    }
+  }
+
+  /**
+   * Persist a numeric high-water mark without allowing an older concurrent
+   * worker to move it backwards. The Redis script makes the read/compare/write
+   * atomic across all indexer worker processes.
+   */
+  async setMaxNumber(key: string, value: number): Promise<boolean> {
+    if (!this.available || !Number.isSafeInteger(value) || value < 0) {
+      return false;
+    }
+
+    try {
+      const updated = await this.client!.eval(
+        `local current = redis.call('GET', KEYS[1])
+         if not current or not tonumber(current) or tonumber(ARGV[1]) > tonumber(current) then
+           redis.call('SET', KEYS[1], ARGV[1])
+           return 1
+         end
+         return 0`,
+        1,
+        key,
+        String(value),
+      );
+      return updated === 1;
+    } catch {
+      // Indexing must not fail merely because its observability checkpoint is
+      // temporarily unavailable. The next successfully processed job retries it.
+      return false;
     }
   }
 
