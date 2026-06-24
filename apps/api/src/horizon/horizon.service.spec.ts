@@ -1,101 +1,77 @@
-import { QUEUE_NAMES } from '../indexer/queues';
-import { HorizonRecord, toIndexerJob } from './horizon.service';
+import { CacheService } from '../cache/cache.service';
+import { LAST_INDEXED_LEDGER_KEY } from '../metrics/indexer-monitor.service';
+import { PoolsService } from '../pools/pools.service';
+import { PriceService } from '../price/price.service';
+import { HorizonService } from './horizon.service';
 
-describe('toIndexerJob', () => {
-  const base: Pick<
-    HorizonRecord,
-    'paging_token' | 'created_at' | 'contract_id'
-  > = {
-    paging_token: '12345',
-    created_at: '2026-06-24T12:00:00.000Z',
-    contract_id: 'pool-contract',
+describe('HorizonService ledger checkpoint', () => {
+  const priceService = { broadcastPrice: jest.fn() };
+  const poolsService = { handlePoolStateUpdate: jest.fn() };
+  const cache = {
+    publish: jest.fn().mockResolvedValue(undefined),
+    setMaxNumber: jest.fn().mockResolvedValue(true),
   };
 
-  it('maps pool_created into the pool-created queue payload', () => {
-    const job = toIndexerJob({
-      ...base,
-      event_type: 'pool_created',
-      data: {
-        token_a: 'token-a',
-        token_b: 'token-b',
-        fee_tier: 3000,
-        sqrt_price_x96: '42',
-      },
-    });
+  beforeEach(() => jest.clearAllMocks());
 
-    expect(job).toEqual({
-      queue: QUEUE_NAMES.POOL_CREATED,
-      data: {
-        eventId: '12345',
-        poolId: 'pool-contract',
-        tokenA: 'token-a',
-        tokenB: 'token-b',
-        fee: '3000',
-        sqrtPriceX96: '42',
-      },
+  it('writes the ledger checkpoint only after processing an effect', async () => {
+    const service = new HorizonService(
+      priceService as unknown as PriceService,
+      poolsService as unknown as PoolsService,
+      cache as unknown as CacheService,
+    );
+    const call = jest.fn().mockResolvedValue({
+      records: [
+        {
+          paging_token: 'cursor-1',
+          ledger: 900,
+          amount: '1.25',
+          created_at: '2026-06-24T12:00:00.000Z',
+        },
+      ],
     });
-  });
-
-  it('maps a swap_processed event and preserves its transaction metadata', () => {
-    const job = toIndexerJob({
-      ...base,
-      id: 'event-2',
-      eventType: 'swap_processed',
-      transaction_hash: 'tx-abc',
-      data: {
-        sender: 'sender',
-        recipient: 'recipient',
-        amount_0: '100',
-        amount_1: '-99',
-        sqrt_price_x96: '99',
-        liquidity: '1000',
-        tick: 12,
-      },
-    });
-
-    expect(job).toEqual({
-      queue: QUEUE_NAMES.SWAP_PROCESSED,
-      data: expect.objectContaining({
-        eventId: 'event-2',
-        poolId: 'pool-contract',
-        transactionHash: 'tx-abc',
-        timestamp: base.created_at,
+    (service as any).server = {
+      effects: () => ({
+        forAccount: () => ({
+          cursor: () => ({ order: () => ({ limit: () => ({ call }) }) }),
+        }),
       }),
-    });
+    };
+
+    await (service as any).poll();
+
+    expect(poolsService.handlePoolStateUpdate).toHaveBeenCalled();
+    expect(cache.setMaxNumber).toHaveBeenCalledWith(
+      LAST_INDEXED_LEDGER_KEY,
+      900,
+    );
   });
 
-  it.each([
-    ['position_minted', QUEUE_NAMES.POSITION_MINTED],
-    ['position_burned', QUEUE_NAMES.POSITION_BURNED],
-  ] as const)('maps %s using the position token ID', (eventType, queue) => {
-    const job = toIndexerJob({
-      ...base,
-      event_type: eventType,
-      data: {
-        token_id: '7',
-        owner: 'owner',
-        tick_lower: -60,
-        tick_upper: 60,
-        liquidity: '0',
-        amount_0: '10',
-        amount_1: '20',
-      },
+  it('does not write a checkpoint for an invalid ledger', async () => {
+    const service = new HorizonService(
+      priceService as unknown as PriceService,
+      poolsService as unknown as PoolsService,
+      cache as unknown as CacheService,
+    );
+    const call = jest.fn().mockResolvedValue({
+      records: [
+        {
+          paging_token: 'cursor-2',
+          ledger: -1,
+          created_at: '2026-06-24T12:00:00.000Z',
+        },
+      ],
     });
-
-    expect(job).toEqual({
-      queue,
-      data: expect.objectContaining({ tokenId: '7', liquidity: '0' }),
-    });
-  });
-
-  it('ignores incomplete and unrelated records', () => {
-    expect(toIndexerJob({ ...base, type: 'account_credited' })).toBeNull();
-    expect(
-      toIndexerJob({
-        ...base,
-        event_type: 'swap_processed',
-        data: { sender: 'sender' },
+    (service as any).server = {
+      effects: () => ({
+        forAccount: () => ({
+          cursor: () => ({ order: () => ({ limit: () => ({ call }) }) }),
+        }),
       }),
-    ).toBeNull();
+    };
+
+    await (service as any).poll();
+
+    expect(cache.setMaxNumber).not.toHaveBeenCalled();
   });
 });

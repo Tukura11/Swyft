@@ -10,8 +10,17 @@ export const QUEUE_NAMES = {
 
 export type QueueName = (typeof QUEUE_NAMES)[keyof typeof QUEUE_NAMES];
 
-export interface PoolCreatedJobData {
+/**
+ * Metadata shared by all events emitted by the ledger indexer. `ledger` is
+ * optional while upstream producers are rolled out; events without it are
+ * still persisted, but cannot advance the recovery checkpoint.
+ */
+export interface IndexerJobData {
   eventId: string;
+  ledger?: number;
+}
+
+export interface PoolCreatedJobData extends IndexerJobData {
   poolId: string;
   tokenA: string;
   tokenB: string;
@@ -19,8 +28,7 @@ export interface PoolCreatedJobData {
   sqrtPriceX96: string;
 }
 
-export interface SwapProcessedJobData {
-  eventId: string;
+export interface SwapProcessedJobData extends IndexerJobData {
   poolId: string;
   sender: string;
   recipient: string;
@@ -35,8 +43,7 @@ export interface SwapProcessedJobData {
   timestamp?: string;
 }
 
-export interface PositionMintedJobData {
-  eventId: string;
+export interface PositionMintedJobData extends IndexerJobData {
   poolId: string;
   /** Pool-local NFT/position identifier. */
   tokenId: string;
@@ -48,8 +55,7 @@ export interface PositionMintedJobData {
   amount1: string;
 }
 
-export interface PositionBurnedJobData {
-  eventId: string;
+export interface PositionBurnedJobData extends IndexerJobData {
   poolId: string;
   /** Pool-local NFT/position identifier. */
   tokenId: string;
@@ -61,8 +67,7 @@ export interface PositionBurnedJobData {
   amount1: string;
 }
 
-export interface FeesCollectedJobData {
-  eventId: string;
+export interface FeesCollectedJobData extends IndexerJobData {
   poolId: string;
   recipient: string;
   amount0: string;
@@ -72,6 +77,9 @@ export interface FeesCollectedJobData {
 export const defaultJobOptions = {
   attempts: 3,
   backoff: { type: 'exponential' as const, delay: 1_000 },
+  // A worker may be restarted after writing to Postgres but before BullMQ can
+  // acknowledge the job. Keep failed jobs and rely on eventId upserts so the
+  // recovered job is safe to execute again.
   removeOnComplete: { count: 100 },
   removeOnFail: false,
 };

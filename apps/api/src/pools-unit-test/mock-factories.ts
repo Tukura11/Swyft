@@ -8,6 +8,7 @@ export const createMockPrismaService = () => ({
     findMany: jest.fn(),
     findUnique: jest.fn(),
     count: jest.fn(),
+    update: jest.fn(),
   },
   swap: {
     findMany: jest.fn(),

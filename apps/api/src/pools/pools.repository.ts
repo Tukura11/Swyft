@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { Pool } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { PoolListQuery, PoolListResult, PoolSnapshot } from './pool.types';
 
@@ -16,24 +17,23 @@ export interface TickData {
 
 @Injectable()
 export class PoolsRepository {
-  private readonly pools = new Map<string, PoolSnapshot>();
-
   constructor(private readonly prisma: PrismaService) {}
 
   async listActivePools(query: PoolListQuery): Promise<PoolListResult> {
     const search = query.search?.trim().toLowerCase();
 
-    const filtered = [...this.pools.values()]
-      .filter((pool) => pool.active)
-      .filter((pool) => {
-        if (!search) return true;
-        return (
-          pool.token0.toLowerCase().includes(search) ||
-          pool.token1.toLowerCase().includes(search)
-        );
-      });
-
-    const sorted = filtered.sort((a, b) => {
+    const pools = await this.prisma.pool.findMany({
+      where: search
+        ? {
+            OR: [
+              { token0Address: { contains: search, mode: 'insensitive' } },
+              { token1Address: { contains: search, mode: 'insensitive' } },
+            ],
+          }
+        : undefined,
+    });
+    const snapshots = pools.map((pool) => this.toSnapshot(pool));
+    const sorted = snapshots.sort((a, b) => {
       if (query.orderBy === 'volume') return b.volume24h - a.volume24h;
       if (query.orderBy === 'apr') return b.feeApr - a.feeApr;
       return b.tvl - a.tvl;
@@ -44,23 +44,48 @@ export class PoolsRepository {
 
     return {
       items,
-      total: sorted.length,
+      total: snapshots.length,
     };
   }
 
   async upsertPoolState(poolId: string, patch: PoolStatePatch): Promise<void> {
-    const existing = this.pools.get(poolId);
-    if (!existing) return;
+    if (patch.currentPrice === undefined) return;
 
-    const currentPrice = patch.currentPrice
-      ? Number.parseFloat(patch.currentPrice)
-      : existing.currentPrice;
+    const currentPrice = Number.parseFloat(patch.currentPrice);
+    if (!Number.isFinite(currentPrice) || currentPrice < 0) return;
 
-    this.pools.set(poolId, {
-      ...existing,
-      currentPrice,
-      updatedAt: Date.now(),
-    });
+    await this.prisma.pool
+      .update({
+        where: { id: poolId },
+        data: { currentPrice: patch.currentPrice },
+      })
+      .catch((error: { code?: string }) => {
+        // State updates may arrive for a pool that has not been indexed yet.
+        // Ignore that race; a later event will create the pool and update it.
+        if (error.code !== 'P2025') throw error;
+      });
+  }
+
+  private toSnapshot(pool: Pool): PoolSnapshot {
+    return {
+      id: pool.id,
+      token0: pool.token0Address,
+      token1: pool.token1Address,
+      feeTier: String(pool.feeTier),
+      tvl: this.asFiniteNumber(pool.tvl),
+      volume24h: this.asFiniteNumber(pool.volume24h),
+      feeApr: this.asFiniteNumber(pool.feeApr),
+      currentPrice: this.asFiniteNumber(pool.currentPrice),
+      // Closed pools are deleted from the current schema, so every row is an
+      // active pool. This preserves the API contract without transient memory.
+      active: true,
+      updatedAt: pool.updatedAt.getTime(),
+    };
+  }
+
+  private asFiniteNumber(value: string | null): number {
+    const parsed = Number.parseFloat(value ?? '0');
+    return Number.isFinite(parsed) ? parsed : 0;
   }
 
   async getTicksByPoolId(

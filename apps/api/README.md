@@ -48,6 +48,14 @@ The `-v` flag removes the named `postgres_data` volume, giving you a clean datab
 | PostgreSQL | `postgresql://postgres:postgres@localhost:5432/swyft` |
 | Redis      | `redis://localhost:6379`                              |
 
+## Indexer recovery
+
+Each successfully persisted indexer event with a valid `ledger` field advances
+the durable Redis high-water mark `indexer:last_ledger`. The update is monotonic,
+so retried or out-of-order jobs cannot move the checkpoint backwards. BullMQ
+retries stalled jobs, while Prisma upserts keyed by `eventId` make the replay
+safe after a worker restart.
+
 ## Running tests
 
 ```bash
