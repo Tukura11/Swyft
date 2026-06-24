@@ -6,6 +6,8 @@ import {
 } from '@nestjs/common';
 import { Worker, Job, QueueEvents } from 'bullmq';
 import { PrismaClient } from '@prisma/client';
+import { CacheService } from '../cache/cache.service';
+import { LAST_INDEXED_LEDGER_KEY } from '../metrics/indexer-monitor.service';
 import {
   QUEUE_NAMES,
   makeQueueOptions,
@@ -22,14 +24,19 @@ export class IndexerWorker implements OnModuleInit, OnModuleDestroy {
   private readonly prisma = new PrismaClient();
   private readonly workers: Worker[] = [];
   private readonly queueEvents: QueueEvents[] = [];
+  private queueDepthTimer: NodeJS.Timeout | null = null;
   private _isLoading = false;
   private _isReady = false;
+
+  constructor(private readonly cache: CacheService) {}
 
   get isLoading(): boolean {
     return this._isLoading;
   }
 
   async onModuleInit() {
+    if (this._isReady || this._isLoading) return;
+
     this._isLoading = true;
     const connection = makeQueueOptions().connection;
 
@@ -67,10 +74,15 @@ export class IndexerWorker implements OnModuleInit, OnModuleDestroy {
     this.logger.log('Indexer workers ready');
     void this.logQueueDepths();
     this._isLoading = false;
-    setInterval(() => void this.logQueueDepths(), 60_000);
+    this.queueDepthTimer = setInterval(
+      () => void this.logQueueDepths(),
+      60_000,
+    );
   }
 
   async onModuleDestroy() {
+    this._isReady = false;
+    if (this.queueDepthTimer) clearInterval(this.queueDepthTimer);
     await Promise.all([
       ...this.workers.map((w) => w.close()),
       ...this.queueEvents.map((qe) => qe.close()),
@@ -94,7 +106,14 @@ export class IndexerWorker implements OnModuleInit, OnModuleDestroy {
       }
       return handler(job);
     };
-    const worker = new Worker<T>(queueName, guardedHandler, { connection });
+    const worker = new Worker<T>(queueName, guardedHandler, {
+      connection,
+      // When a process dies mid-job, BullMQ marks the job stalled after its
+      // lock expires and retries it. The handlers are idempotent on eventId.
+      lockDuration: 60_000,
+      stalledInterval: 30_000,
+      maxStalledCount: 2,
+    });
 
     worker.on('completed', (job) => {
       this.logger.log(`completed queue=${queueName} jobId=${job.id}`);
@@ -143,7 +162,8 @@ export class IndexerWorker implements OnModuleInit, OnModuleDestroy {
     data: Record<string, unknown>,
   ): boolean {
     const empty = Object.entries(data).filter(
-      ([, v]) => v === null || v === undefined || v === '',
+      ([key, v]) =>
+        key !== 'ledger' && (v === null || v === undefined || v === ''),
     );
     if (empty.length > 0) {
       this.logger.warn(
@@ -171,6 +191,7 @@ export class IndexerWorker implements OnModuleInit, OnModuleDestroy {
         sqrtPriceX96: d.sqrtPriceX96,
       },
     });
+    await this.advanceLedger(job.id, d.ledger);
   }
 
   private async handleSwapProcessed(job: Job<SwapProcessedJobData>) {
@@ -192,6 +213,7 @@ export class IndexerWorker implements OnModuleInit, OnModuleDestroy {
         tick: d.tick,
       },
     });
+    await this.advanceLedger(job.id, d.ledger);
   }
 
   private async handlePositionMinted(job: Job<PositionMintedJobData>) {
@@ -212,6 +234,7 @@ export class IndexerWorker implements OnModuleInit, OnModuleDestroy {
         amount1: d.amount1,
       },
     });
+    await this.advanceLedger(job.id, d.ledger);
   }
 
   private async handlePositionBurned(job: Job<PositionBurnedJobData>) {
@@ -232,6 +255,7 @@ export class IndexerWorker implements OnModuleInit, OnModuleDestroy {
         amount1: d.amount1,
       },
     });
+    await this.advanceLedger(job.id, d.ledger);
   }
 
   private async handleFeesCollected(job: Job<FeesCollectedJobData>) {
@@ -249,5 +273,28 @@ export class IndexerWorker implements OnModuleInit, OnModuleDestroy {
         amount1: d.amount1,
       },
     });
+    await this.advanceLedger(job.id, d.ledger);
+  }
+
+  /** Advances the durable checkpoint only after the event write completed. */
+  private async advanceLedger(jobId: string | undefined, ledger?: number) {
+    if (ledger === undefined) return;
+
+    if (!Number.isSafeInteger(ledger) || ledger < 0) {
+      this.logger.warn(
+        `Skipping ledger checkpoint for job ${jobId ?? 'unknown'} — invalid ledger: ${String(ledger)}`,
+      );
+      return;
+    }
+
+    const advanced = await this.cache.setMaxNumber(
+      LAST_INDEXED_LEDGER_KEY,
+      ledger,
+    );
+    if (!advanced) {
+      this.logger.debug(
+        `Ledger checkpoint unchanged or unavailable for job ${jobId ?? 'unknown'} ledger=${ledger}`,
+      );
+    }
   }
 }

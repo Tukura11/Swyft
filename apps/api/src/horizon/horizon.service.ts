@@ -8,6 +8,7 @@ import { Horizon } from '@stellar/stellar-sdk';
 import { PriceService, PriceEvent } from '../price/price.service';
 import { PoolsService } from '../pools/pools.service';
 import { CacheService } from '../cache/cache.service';
+import { LAST_INDEXED_LEDGER_KEY } from '../metrics/indexer-monitor.service';
 
 @Injectable()
 export class HorizonService implements OnModuleInit, OnModuleDestroy {
@@ -52,27 +53,32 @@ export class HorizonService implements OnModuleInit, OnModuleDestroy {
         .call();
 
       for (const record of page.records) {
-        this.cursor = record.paging_token;
         const event = this.toPrice(record);
-        if (!event) continue;
-
-        this.priceService.broadcastPrice(event);
-        await this.poolsService.handlePoolStateUpdate(event.poolId, {
-          currentPrice: event.currentPrice,
-        });
         if (event) {
+          this.priceService.broadcastPrice(event);
+          await this.poolsService.handlePoolStateUpdate(event.poolId, {
+            currentPrice: event.currentPrice,
+          });
           await this.cache.publish(
             `prices:${event.poolId}`,
             JSON.stringify(event),
           );
         }
+
+        // The record has now been fully handled (or intentionally ignored),
+        // so it is safe to make its ledger visible to lag monitoring. A
+        // failed persistence path throws before this point and is retried.
+        await this.advanceLedger(
+          (record as unknown as IndexerEffectRecord).ledger,
+        );
+        this.cursor = record.paging_token;
       }
     } catch (err) {
       this.logger.warn(`Horizon poll error: ${(err as Error).message}`);
     }
   }
 
-  private toPrice(r: EffectRecord): PriceEvent | null {
+  private toPrice(r: IndexerEffectRecord): PriceEvent | null {
     if (!r.amount) return null;
     const price = parseFloat(r.amount);
     return {
@@ -84,10 +90,18 @@ export class HorizonService implements OnModuleInit, OnModuleDestroy {
       timestamp: new Date(r.created_at).getTime(),
     };
   }
+
+  private async advanceLedger(ledger?: number): Promise<void> {
+    if (!Number.isSafeInteger(ledger) || ledger === undefined || ledger < 0) {
+      return;
+    }
+    await this.cache.setMaxNumber(LAST_INDEXED_LEDGER_KEY, ledger);
+  }
 }
 
-interface EffectRecord {
+interface IndexerEffectRecord {
   paging_token: string;
+  ledger?: number;
   amount?: string;
   tick?: number;
   liquidity?: string;
