@@ -14,6 +14,41 @@ export interface Candle {
   volume: number;
 }
 
+interface PriceCandleDto {
+  timestamp: number;
+  open: string;
+  high: string;
+  low: string;
+  close: string;
+  volume: string;
+}
+
+interface CandlesResponse {
+  data: PriceCandleDto[];
+}
+
+function isValidCandle(candle: PriceCandleDto): boolean {
+  return (
+    typeof candle.timestamp === "number" &&
+    typeof candle.open === "string" &&
+    typeof candle.high === "string" &&
+    typeof candle.low === "string" &&
+    typeof candle.close === "string" &&
+    typeof candle.volume === "string"
+  );
+}
+
+function mapPriceCandleToCandle(dto: PriceCandleDto): Candle {
+  return {
+    time: dto.timestamp,
+    open: parseFloat(dto.open),
+    high: parseFloat(dto.high),
+    low: parseFloat(dto.low),
+    close: parseFloat(dto.close),
+    volume: parseFloat(dto.volume),
+  };
+}
+
 const WS_BASE = API_BASE.replace(/^http/, "ws");
 
 export function usePriceCandles(
@@ -33,8 +68,11 @@ export function usePriceCandles(
         `${API_BASE}/prices/${tokenA}/${tokenB}/candles?interval=${interval}&limit=168`
       );
       if (!res.ok) { setCandles([]); return; }
-      const data = (await res.json()) as { candles?: Candle[] };
-      setCandles(data.candles ?? []);
+      const data = (await res.json()) as CandlesResponse;
+      const validCandles = (data.data ?? [])
+        .filter(isValidCandle)
+        .map(mapPriceCandleToCandle);
+      setCandles(validCandles);
     } catch {
       setCandles([]);
     } finally {
