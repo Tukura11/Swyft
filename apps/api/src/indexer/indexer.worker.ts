@@ -273,6 +273,21 @@ export class IndexerWorker implements OnModuleInit, OnModuleDestroy {
         amount1: d.amount1,
       },
     });
+    // Project into relational Position table when the event includes a tokenId.
+    if (d.tokenId) {
+      await this.prisma.position.upsert({
+        where: { poolId_tokenId: { poolId: d.poolId, tokenId: d.tokenId } },
+        update: { liquidity: d.liquidity },
+        create: {
+          poolId: d.poolId,
+          tokenId: d.tokenId,
+          ownerAddress: d.owner,
+          lowerTick: d.tickLower,
+          upperTick: d.tickUpper,
+          liquidity: d.liquidity,
+        },
+      });
+    }
     await this.advanceLedger(job.id, d.ledger);
   }
 
@@ -294,6 +309,26 @@ export class IndexerWorker implements OnModuleInit, OnModuleDestroy {
         amount1: d.amount1,
       },
     });
+    // Project into relational Position table when the event includes a tokenId.
+    if (d.tokenId) {
+      const isClosed = d.liquidity === '0';
+      await this.prisma.position.upsert({
+        where: { poolId_tokenId: { poolId: d.poolId, tokenId: d.tokenId } },
+        update: {
+          liquidity: d.liquidity,
+          ...(isClosed ? { closedAt: new Date() } : {}),
+        },
+        create: {
+          poolId: d.poolId,
+          tokenId: d.tokenId,
+          ownerAddress: d.owner,
+          lowerTick: d.tickLower,
+          upperTick: d.tickUpper,
+          liquidity: d.liquidity,
+          ...(isClosed ? { closedAt: new Date() } : {}),
+        },
+      });
+    }
     await this.advanceLedger(job.id, d.ledger);
   }
 
