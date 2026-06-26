@@ -56,6 +56,8 @@ describe("buildSwapTx", () => {
     expect(payload.amountIn).toBe(AMOUNT_IN);
     expect(payload.minimumReceived).toBe(MIN_OUT);
     expect(payload.ownerAddress).toBe(OWNER);
+    expect(payload.timestamp).toBeDefined();
+    expect(typeof payload.timestamp).toBe("string");
   });
 
   it("produces a different xdr for different amountIn values", () => {
@@ -70,6 +72,45 @@ describe("buildSwapTx", () => {
     const tx1 = buildSwapTx(params);
     const tx2 = buildSwapTx({ ...params, amountIn: toRawAmount("5000000") });
     expect(tx1.xdr).not.toBe(tx2.xdr);
+  });
+
+  it("throws when poolId is empty", () => {
+    expect(() =>
+      buildSwapTx({
+        poolId: toStellarAddress(""),
+        tokenInId: TOKEN_IN,
+        tokenOutId: TOKEN_OUT,
+        amountIn: AMOUNT_IN,
+        minimumReceived: MIN_OUT,
+        ownerAddress: OWNER,
+      })
+    ).toThrow();
+  });
+
+  it("throws when tokenInId is empty", () => {
+    expect(() =>
+      buildSwapTx({
+        poolId: POOL,
+        tokenInId: toStellarAddress(""),
+        tokenOutId: TOKEN_OUT,
+        amountIn: AMOUNT_IN,
+        minimumReceived: MIN_OUT,
+        ownerAddress: OWNER,
+      })
+    ).toThrow();
+  });
+
+  it("throws when amountIn is empty", () => {
+    expect(() =>
+      buildSwapTx({
+        poolId: POOL,
+        tokenInId: TOKEN_IN,
+        tokenOutId: TOKEN_OUT,
+        amountIn: toRawAmount(""),
+        minimumReceived: MIN_OUT,
+        ownerAddress: OWNER,
+      })
+    ).toThrow();
   });
 });
 

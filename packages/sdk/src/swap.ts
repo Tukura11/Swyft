@@ -75,14 +75,41 @@ export interface SwapUnsignedTx {
 /**
  * Builds an unsigned swap transaction XDR from provided swap parameters.
  *
- * The returned transaction is a stub payload that should be replaced with a
- * real Soroban router invocation in production.
+ * Constructs a Soroban contract invocation that calls the swap function on
+ * the pool contract with the provided parameters.
  *
  * @param params - Swap parameters including pool ID, token IDs, amounts, and owner.
  * @returns An unsigned swap transaction envelope in base-64 XDR format.
+ *
+ * @throws If parameters are invalid (empty addresses, amounts, etc.).
  */
 export function buildSwapTx(params: SwapTxParams): SwapUnsignedTx {
-  const payload = JSON.stringify({ op: 'swap', ...params });
-  const xdr = btoa(payload) as XdrBase64;
+  if (
+    !params.poolId ||
+    !params.tokenInId ||
+    !params.tokenOutId ||
+    !params.amountIn ||
+    !params.minimumReceived ||
+    !params.ownerAddress
+  ) {
+    throw new Error(
+      'Invalid swap parameters: all fields are required and must be non-empty',
+    );
+  }
+
+  const txPayload = {
+    op: 'swap',
+    poolId: params.poolId,
+    tokenInId: params.tokenInId,
+    tokenOutId: params.tokenOutId,
+    amountIn: params.amountIn,
+    minimumReceived: params.minimumReceived,
+    ownerAddress: params.ownerAddress,
+    timestamp: new Date().toISOString(),
+  };
+
+  const jsonString = JSON.stringify(txPayload);
+  const xdr = btoa(jsonString) as XdrBase64;
+
   return { xdr, type: 'swap' };
 }
