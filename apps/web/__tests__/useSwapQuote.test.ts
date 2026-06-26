@@ -1,11 +1,12 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { renderHook } from '@testing-library/react';
-import { usePriceCandles } from '@/hooks/usePriceCandles';
+import { renderHook, waitFor } from '@testing-library/react';
+import { useSwapQuote } from '@/hooks/useSwapQuote';
 
 // ─── Mock WebSocket ───────────────────────────────────────────────────────────
 
 const mockWebSocketSend = vi.fn();
 const mockWebSocketClose = vi.fn();
+let mockWebSocketInstance: any;
 
 global.WebSocket = vi.fn(() => ({
   send: mockWebSocketSend,
@@ -15,15 +16,6 @@ global.WebSocket = vi.fn(() => ({
   onclose: null,
   onerror: null,
 })) as any;
-
-// ─── Mock fetch ───────────────────────────────────────────────────────────────
-
-global.fetch = vi.fn(() =>
-  Promise.resolve({
-    ok: true,
-    json: () => Promise.resolve({ candles: [] }),
-  } as Response)
-);
 
 // ─── Mock window.location ─────────────────────────────────────────────────────
 
@@ -44,58 +36,79 @@ afterEach(() => {
 
 // ─── Tests ────────────────────────────────────────────────────────────────────
 
-describe('usePriceCandles — WebSocket protocol', () => {
+describe('useSwapQuote — WebSocket protocol', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  it('uses wss:// protocol when page is https', async () => {
+  it('uses wss:// protocol when page is https', () => {
     setProtocol('https:');
 
-    renderHook(() => usePriceCandles('token-a', 'token-b', '1h'));
-
-    // Give it a moment for the WebSocket to be created
-    await new Promise((resolve) => setTimeout(resolve, 0));
+    renderHook(() =>
+      useSwapQuote({
+        poolId: 'pool-1',
+        tokenInId: 'token-1',
+        tokenOutId: 'token-2',
+        amountIn: '100',
+        slippageBps: 50,
+      })
+    );
 
     expect(global.WebSocket).toHaveBeenCalledWith(
       expect.stringContaining('wss://')
     );
   });
 
-  it('uses ws:// protocol when page is http', async () => {
+  it('uses ws:// protocol when page is http', () => {
     setProtocol('http:');
 
-    renderHook(() => usePriceCandles('token-a', 'token-b', '1h'));
-
-    // Give it a moment for the WebSocket to be created
-    await new Promise((resolve) => setTimeout(resolve, 0));
+    renderHook(() =>
+      useSwapQuote({
+        poolId: 'pool-1',
+        tokenInId: 'token-1',
+        tokenOutId: 'token-2',
+        amountIn: '100',
+        slippageBps: 50,
+      })
+    );
 
     expect(global.WebSocket).toHaveBeenCalledWith(
       expect.stringContaining('ws://')
     );
   });
 
-  it('uses NEXT_PUBLIC_WS_URL when environment variable is set', async () => {
-    process.env.NEXT_PUBLIC_WS_URL = 'wss://custom-candles.example.com';
+  it('uses NEXT_PUBLIC_WS_URL when environment variable is set', () => {
+    process.env.NEXT_PUBLIC_WS_URL = 'wss://custom-ws.example.com';
 
-    renderHook(() => usePriceCandles('token-a', 'token-b', '1d'));
-
-    // Give it a moment for the WebSocket to be created
-    await new Promise((resolve) => setTimeout(resolve, 0));
+    renderHook(() =>
+      useSwapQuote({
+        poolId: 'pool-1',
+        tokenInId: 'token-1',
+        tokenOutId: 'token-2',
+        amountIn: '100',
+        slippageBps: 50,
+      })
+    );
 
     expect(global.WebSocket).toHaveBeenCalledWith(
-      expect.stringContaining('custom-candles.example.com')
+      expect.stringContaining('custom-ws.example.com')
     );
 
     delete process.env.NEXT_PUBLIC_WS_URL;
   });
 
-  it('cancels reconnect timer on unmount', async () => {
+  it('cancels reconnect timer on unmount', () => {
     const clearTimeoutSpy = vi.spyOn(global, 'clearTimeout');
 
-    const { unmount } = renderHook(() => usePriceCandles('token-a', 'token-b', '1h'));
-
-    await new Promise((resolve) => setTimeout(resolve, 0));
+    const { unmount } = renderHook(() =>
+      useSwapQuote({
+        poolId: 'pool-1',
+        tokenInId: 'token-1',
+        tokenOutId: 'token-2',
+        amountIn: '100',
+        slippageBps: 50,
+      })
+    );
 
     unmount();
 
@@ -103,20 +116,32 @@ describe('usePriceCandles — WebSocket protocol', () => {
     expect(mockWebSocketClose).toHaveBeenCalled();
   });
 
-  it('closes WebSocket on unmount', async () => {
-    const { unmount } = renderHook(() => usePriceCandles('token-a', 'token-b', '5m'));
-
-    await new Promise((resolve) => setTimeout(resolve, 0));
+  it('closes WebSocket on unmount', () => {
+    const { unmount } = renderHook(() =>
+      useSwapQuote({
+        poolId: 'pool-1',
+        tokenInId: 'token-1',
+        tokenOutId: 'token-2',
+        amountIn: '100',
+        slippageBps: 50,
+      })
+    );
 
     unmount();
 
     expect(mockWebSocketClose).toHaveBeenCalled();
   });
 
-  it('handles malformed WebSocket messages without throwing', async () => {
-    renderHook(() => usePriceCandles('token-a', 'token-b', '1h'));
-
-    await new Promise((resolve) => setTimeout(resolve, 0));
+  it('handles malformed WebSocket messages without throwing', () => {
+    const { result } = renderHook(() =>
+      useSwapQuote({
+        poolId: 'pool-1',
+        tokenInId: 'token-1',
+        tokenOutId: 'token-2',
+        amountIn: '100',
+        slippageBps: 50,
+      })
+    );
 
     const mockWs = (global.WebSocket as any).mock.results[0].value;
 

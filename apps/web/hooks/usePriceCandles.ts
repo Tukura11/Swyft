@@ -14,42 +14,15 @@ export interface Candle {
   volume: number;
 }
 
-interface PriceCandleDto {
-  timestamp: number;
-  open: string;
-  high: string;
-  low: string;
-  close: string;
-  volume: string;
-}
+function getWsBase(): string {
+  if (typeof window !== 'undefined' && process.env.NEXT_PUBLIC_WS_URL) {
+    return process.env.NEXT_PUBLIC_WS_URL;
+  }
 
-interface CandlesResponse {
-  data: PriceCandleDto[];
+  const protocol = typeof window !== 'undefined' && window.location.protocol === 'https:' ? 'wss' : 'ws';
+  const host = typeof window !== 'undefined' ? window.location.host : 'localhost:3000';
+  return `${protocol}://${host}`;
 }
-
-function isValidCandle(candle: PriceCandleDto): boolean {
-  return (
-    typeof candle.timestamp === "number" &&
-    typeof candle.open === "string" &&
-    typeof candle.high === "string" &&
-    typeof candle.low === "string" &&
-    typeof candle.close === "string" &&
-    typeof candle.volume === "string"
-  );
-}
-
-function mapPriceCandleToCandle(dto: PriceCandleDto): Candle {
-  return {
-    time: dto.timestamp,
-    open: parseFloat(dto.open),
-    high: parseFloat(dto.high),
-    low: parseFloat(dto.low),
-    close: parseFloat(dto.close),
-    volume: parseFloat(dto.volume),
-  };
-}
-
-const WS_BASE = API_BASE.replace(/^http/, "ws");
 
 export function usePriceCandles(
   tokenA: string | null,
@@ -92,8 +65,9 @@ export function usePriceCandles(
     wsRef.current?.close();
 
     let ws: WebSocket;
+    let reconnectTimer: NodeJS.Timeout | null = null;
     try {
-      ws = new WebSocket(`${WS_BASE}/price`);
+      ws = new WebSocket(`${getWsBase()}/price`);
     } catch {
       return;
     }
@@ -124,7 +98,10 @@ export function usePriceCandles(
       }
     };
 
-    return () => { ws.close(); };
+    return () => {
+      if (reconnectTimer) clearTimeout(reconnectTimer);
+      ws.close();
+    };
   }, [tokenA, tokenB, interval]);
 
   const currentPrice = candles.length > 0 ? candles[candles.length - 1].close : null;
