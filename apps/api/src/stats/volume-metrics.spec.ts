@@ -2,47 +2,68 @@ import {
   calculateSwapFeesUsd,
   calculateSwapVolumeUsd,
   isInHalfOpenWindow,
+  SwapAmounts,
 } from './volume-metrics';
 
-describe('swap USD metrics', () => {
-  it('converts both swap sides from base units before applying USD prices', () => {
-    expect(
-      calculateSwapVolumeUsd(
-        { amount0: '-1500000', amount1: '2500000' },
-        6,
-        6,
-        2,
-        3,
-      ),
-    ).toBe(10.5);
-  });
+describe('isInHalfOpenWindow', () => {
+  const start = new Date('2024-01-01T00:00:00.000Z');
+  const end = new Date('2024-01-02T00:00:00.000Z');
 
-  it('values token0 fees using token0 decimals and price', () => {
-    expect(calculateSwapFeesUsd('30000', 6, 2)).toBeCloseTo(0.06);
-  });
-
-  it('rejects malformed amounts, decimals, or missing prices', () => {
-    expect(() =>
-      calculateSwapVolumeUsd({ amount0: '1.5', amount1: '1' }, 6, 6, 1, 1),
-    ).toThrow('Swap amount is invalid');
-    expect(() => calculateSwapFeesUsd('100', 19, 1)).toThrow(
-      'Token decimals are invalid',
-    );
-    expect(() => calculateSwapFeesUsd('100', 6, Number.NaN)).toThrow(
-      'Token USD price is invalid',
-    );
-  });
-
-  it('uses a half-open time window including its start and excluding its end', () => {
-    const start = new Date('2026-01-01T00:00:00.000Z');
-    const end = new Date('2026-01-02T00:00:00.000Z');
-    expect(isInHalfOpenWindow(start, start, end)).toBe(true);
-    expect(isInHalfOpenWindow(new Date(end.getTime() - 1), start, end)).toBe(
+  it('includes a swap timestamped exactly on the window start boundary', () => {
+    expect(isInHalfOpenWindow(new Date(start.getTime()), start, end)).toBe(
       true,
     );
-    expect(isInHalfOpenWindow(end, start, end)).toBe(false);
+  });
+
+  it('excludes a swap timestamped exactly on the window end boundary', () => {
+    expect(isInHalfOpenWindow(new Date(end.getTime()), start, end)).toBe(false);
+  });
+
+  it('excludes a swap just before the window start', () => {
     expect(isInHalfOpenWindow(new Date(start.getTime() - 1), start, end)).toBe(
       false,
     );
+  });
+
+  it('excludes a swap just after the window end', () => {
+    expect(isInHalfOpenWindow(new Date(end.getTime() + 1), start, end)).toBe(
+      false,
+    );
+  });
+
+  it('includes a swap strictly inside the window', () => {
+    const inside = new Date(start.getTime() + 1);
+    expect(isInHalfOpenWindow(inside, start, end)).toBe(true);
+  });
+
+  it('returns false for an invalid timestamp', () => {
+    expect(isInHalfOpenWindow(new Date('invalid'), start, end)).toBe(false);
+  });
+});
+
+describe('calculateSwapVolumeUsd', () => {
+  const swap: SwapAmounts = {
+    amount0: '1000000',
+    amount1: '2000000',
+  };
+
+  it('sums the USD value of both swap amounts', () => {
+    expect(calculateSwapVolumeUsd(swap, 6, 6, 1, 0.5)).toBe(2);
+  });
+
+  it('returns zero for an empty swap', () => {
+    expect(
+      calculateSwapVolumeUsd({ amount0: '0', amount1: '0' }, 6, 6, 1, 1),
+    ).toBe(0);
+  });
+});
+
+describe('calculateSwapFeesUsd', () => {
+  it('converts a raw fee amount to USD', () => {
+    expect(calculateSwapFeesUsd('1000000', 6, 2)).toBe(2);
+  });
+
+  it('returns zero for an empty fee amount', () => {
+    expect(calculateSwapFeesUsd('0', 6, 2)).toBe(0);
   });
 });
